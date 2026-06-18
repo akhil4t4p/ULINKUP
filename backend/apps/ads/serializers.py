@@ -12,7 +12,7 @@ class AdvertisementSerializer(serializers.ModelSerializer):
             'target_category', 'category_name', 'budget', 'start_date', 
             'end_date', 'clicks', 'views', 'status', 'created_at'
         )
-        read_only_fields = ('id', 'clicks', 'views', 'created_at')
+        read_only_fields = ('id', 'business', 'clicks', 'views', 'created_at')
 
     def validate_budget(self, value):
         if value <= 0:
