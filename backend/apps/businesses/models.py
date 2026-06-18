@@ -28,11 +28,16 @@ class BusinessProfile(models.Model):
     about = models.TextField(blank=True)
     hourly_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     experience = models.PositiveIntegerField(default=0)
-    location = models.CharField(max_length=255)
-    is_available = models.BooleanField(default=True)
+    location = models.CharField(max_length=255, db_index=True)
+    is_available = models.BooleanField(default=True, db_index=True)
     profile_photo = models.URLField(max_length=500, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['category', 'is_available']),
+        ]
 
     def __str__(self):
         return f"Business: {self.user.email} ({self.category.name if self.category else 'No Category'})"

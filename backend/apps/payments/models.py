@@ -32,8 +32,8 @@ class Transaction(models.Model):
         related_name='transactions'
     )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    transaction_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
-    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='PENDING')
+    transaction_type = models.CharField(max_length=20, choices=TYPE_CHOICES, db_index=True)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='PENDING', db_index=True)
     reference_id = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -15,7 +15,8 @@ class Review(models.Model):
         related_name='reviews_received'
     )
     rating = models.PositiveIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(5)]
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        db_index=True
     )
     comment = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
