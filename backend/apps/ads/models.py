@@ -14,7 +14,7 @@ class Advertisement(models.Model):
         related_name='advertisements'
     )
     title = models.CharField(max_length=200)
-    banner_image = models.URLField(max_length=500)
+    banner_image = models.ImageField(upload_to='ads/')
     target_category = models.ForeignKey(
         Category, 
         on_delete=models.SET_NULL, 

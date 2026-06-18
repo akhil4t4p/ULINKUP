@@ -30,7 +30,7 @@ class BusinessProfile(models.Model):
     experience = models.PositiveIntegerField(default=0)
     location = models.CharField(max_length=255, db_index=True)
     is_available = models.BooleanField(default=True, db_index=True)
-    profile_photo = models.URLField(max_length=500, blank=True, null=True)
+    profile_photo = models.ImageField(upload_to='businesses/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

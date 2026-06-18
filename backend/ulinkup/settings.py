@@ -32,8 +32,15 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    
+    # Cloudinary Storage MUST be before staticfiles
+    'cloudinary_storage',
+    
     'django.contrib.staticfiles',
     'django.contrib.sites',  # Required for allauth
+    
+    # Cloudinary main helper app
+    'cloudinary',
     
     # Custom Apps
     'apps.users.apps.UsersConfig',
@@ -188,3 +195,14 @@ CORS_ALLOWED_ORIGINS = env('CORS_ALLOWED_ORIGINS')
 # If CORS_ALLOW_ALL_ORIGINS is enabled during development
 if DEBUG and not CORS_ALLOWED_ORIGINS:
     CORS_ALLOW_ALL_ORIGINS = True
+
+# Cloudinary Storage Configuration
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME', default=''),
+    'API_KEY': env('CLOUDINARY_API_KEY', default=''),
+    'API_SECRET': env('CLOUDINARY_API_SECRET', default=''),
+}
+
+# Only override default media storage if cloud credentials are fully configured
+if CLOUDINARY_STORAGE['CLOUD_NAME'] and CLOUDINARY_STORAGE['API_KEY']:
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'

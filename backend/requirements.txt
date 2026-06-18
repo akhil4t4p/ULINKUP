@@ -7,3 +7,6 @@ djangorestframework-simplejwt
 django-allauth
 dj-rest-auth[with_social]
 google-auth
+pillow
+cloudinary
+django-cloudinary-storage
