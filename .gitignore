@@ -1,0 +1,45 @@
+# --- Node / React / Frontend ---
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# --- Python / Django / Backend ---
+backend/venv/
+backend/.env
+backend/db.sqlite3
+backend/db.sqlite3-journal
+backend/__pycache__/
+backend/**/*.pyc
+backend/**/*.pyo
+backend/**/*.pyd
+backend/.pytest_cache/
+backend/htmlcov/
+backend/.coverage
+backend/media/
+backend/staticfiles/
+
+# --- IDE / Editors ---
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+
+# --- OS Caches ---
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# --- Tools ---
+ULINKUP_tools/

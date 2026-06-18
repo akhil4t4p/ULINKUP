@@ -1,0 +1,6 @@
+django>=6.0,<7.0
+djangorestframework
+django-cors-headers
+django-environ
+psycopg[binary]
+djangorestframework-simplejwt
