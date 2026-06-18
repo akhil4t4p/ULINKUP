@@ -24,9 +24,9 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'category', 'category_name', 
             'about', 'hourly_rate', 'experience', 'location', 
             'is_available', 'profile_photo', 'work_timings', 'service_areas',
-            'portfolio_items', 'rating', 'created_at', 'updated_at'
+            'portfolio_items', 'rating', 'verified', 'is_featured', 'created_at', 'updated_at'
         )
-        read_only_fields = ('id', 'created_at', 'updated_at', 'portfolio_items', 'rating')
+        read_only_fields = ('id', 'created_at', 'updated_at', 'portfolio_items', 'rating', 'verified', 'is_featured')
 
 class LeadSerializer(serializers.ModelSerializer):
     customer_name = serializers.SerializerMethodField()

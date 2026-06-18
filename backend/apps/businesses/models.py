@@ -33,6 +33,8 @@ class BusinessProfile(models.Model):
     profile_photo = models.ImageField(upload_to='businesses/', blank=True, null=True)
     work_timings = models.CharField(max_length=255, default='Mon-Fri: 9:00 AM - 6:00 PM', blank=True)
     service_areas = models.CharField(max_length=255, default='Local Area Only', blank=True)
+    verified = models.BooleanField(default=False)
+    is_featured = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

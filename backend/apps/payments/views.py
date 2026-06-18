@@ -63,6 +63,126 @@ class WalletViewSet(viewsets.ModelViewSet):
 
         return Response({'success': True, 'new_balance': wallet.balance})
 
+    @action(detail=False, methods=['post'])
+    def create_razorpay_order(self, request):
+        amount = request.data.get('amount')
+        payment_type = request.data.get('type', 'RECHARGE')
+        plan_type = request.data.get('plan_type', '')
+
+        if not amount or float(amount) <= 0:
+            return Response({'error': 'Invalid amount'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from django.conf import settings
+        order_id = ""
+        mock_mode = True
+
+        if settings.RAZORPAY_KEY_ID and settings.RAZORPAY_KEY_SECRET:
+            try:
+                import razorpay
+                client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+                razorpay_order = client.order.create({
+                    'amount': int(float(amount) * 100),  # In paise
+                    'currency': 'INR',
+                    'payment_capture': '1'
+                })
+                order_id = razorpay_order['id']
+                mock_mode = False
+            except Exception:
+                import uuid
+                order_id = f"order_mock_{uuid.uuid4().hex[:12]}"
+        else:
+            import uuid
+            order_id = f"order_mock_{uuid.uuid4().hex[:12]}"
+
+        Transaction.objects.create(
+            user=request.user,
+            amount=Decimal(str(amount)),
+            transaction_type=payment_type,
+            status='PENDING',
+            reference_id=order_id
+        )
+
+        return Response({
+            'order_id': order_id,
+            'amount': amount,
+            'key_id': settings.RAZORPAY_KEY_ID,
+            'mock': mock_mode,
+            'type': payment_type,
+            'plan_type': plan_type
+        })
+
+    @action(detail=False, methods=['post'])
+    def verify_razorpay_payment(self, request):
+        order_id = request.data.get('razorpay_order_id')
+        payment_id = request.data.get('razorpay_payment_id')
+        signature = request.data.get('razorpay_signature')
+        payment_type = request.data.get('type', 'RECHARGE')
+        plan_type = request.data.get('plan_type', '')
+
+        if not order_id:
+            return Response({'error': 'Order ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            transaction = Transaction.objects.get(user=request.user, reference_id=order_id, status='PENDING')
+        except Transaction.DoesNotExist:
+            return Response({'error': 'Pending transaction not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        from django.conf import settings
+        verified = False
+
+        if not order_id.startswith('order_mock_') and settings.RAZORPAY_KEY_ID and settings.RAZORPAY_KEY_SECRET:
+            try:
+                import razorpay
+                client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+                client.utility.verify_payment_signature({
+                    'razorpay_order_id': order_id,
+                    'razorpay_payment_id': payment_id,
+                    'razorpay_signature': signature
+                })
+                verified = True
+            except Exception:
+                verified = False
+        else:
+            verified = True
+
+        if not verified:
+            transaction.status = 'FAILED'
+            transaction.save()
+            return Response({'success': False, 'error': 'Payment verification failed'}, status=status.HTTP_400_BAD_REQUEST)
+
+        transaction.status = 'SUCCESS'
+        transaction.save()
+
+        wallet, created = Wallet.objects.get_or_create(user=request.user)
+
+        if payment_type == 'RECHARGE':
+            wallet.balance += transaction.amount
+            wallet.save()
+        elif payment_type == 'SUBSCRIPTION':
+            from apps.subscriptions.models import Subscription
+            Subscription.objects.create(
+                user=request.user,
+                plan_type=plan_type or 'SILVER',
+                is_active=True
+            )
+            if plan_type == 'GOLD' and hasattr(request.user, 'business_profile'):
+                request.user.business_profile.is_featured = True
+                request.user.business_profile.save()
+        elif payment_type == 'VERIFICATION':
+            if hasattr(request.user, 'business_profile'):
+                request.user.business_profile.verified = True
+                request.user.business_profile.save()
+        elif payment_type == 'FEATURE':
+            if hasattr(request.user, 'business_profile'):
+                request.user.business_profile.is_featured = True
+                request.user.business_profile.save()
+
+        return Response({
+            'success': True,
+            'balance': wallet.balance,
+            'transaction': TransactionSerializer(transaction).data
+        })
+
 class TransactionViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = TransactionSerializer
     permission_classes = [permissions.IsAuthenticated]

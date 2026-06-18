@@ -51,21 +51,82 @@ export default function CustomerDashboard() {
     if (isNaN(parsed) || parsed <= 0) return;
 
     try {
-      const res = await api.post('/api/wallets/recharge/', { amount: parsed });
+      // 1. Create Razorpay order on backend
+      const res = await api.post('/api/wallets/create_razorpay_order/', {
+        amount: parsed,
+        type: 'RECHARGE'
+      });
+
       if (res.status === 200) {
-        setWalletBalance(parseFloat(res.data.balance));
-        setAddingCredits(false);
-        setCreditAmount('100');
-        
-        // Refresh transaction list
-        const transRes = await api.get('/api/transactions/');
-        if (transRes.status === 200) {
-          setInquiries(transRes.data.results || transRes.data);
+        const orderData = res.data;
+
+        // 2. Open payment flow
+        if (orderData.mock) {
+          const confirmPayment = window.confirm(`[MOCK PAYMENTS ENGINE] Simulate payment of ₹${parsed}?`);
+          if (confirmPayment) {
+            const verifyRes = await api.post('/api/wallets/verify_razorpay_payment/', {
+              razorpay_order_id: orderData.order_id,
+              type: 'RECHARGE'
+            });
+            if (verifyRes.status === 200 && verifyRes.data.success) {
+              setWalletBalance(parseFloat(verifyRes.data.balance));
+              setAddingCredits(false);
+              setCreditAmount('100');
+              
+              // Refresh transaction list
+              const transRes = await api.get('/api/transactions/');
+              if (transRes.status === 200) {
+                setInquiries(transRes.data.results || transRes.data);
+              }
+              alert(`Successfully recharged wallet with ₹${parsed} (Mock Mode)!`);
+            }
+          }
+        } else {
+          // Open real Razorpay popup
+          const options = {
+            key: orderData.key_id,
+            amount: parseFloat(orderData.amount) * 100, // in paise
+            currency: 'INR',
+            name: 'ULINKUP Hyperlocal',
+            description: 'Wallet Recharge',
+            order_id: orderData.order_id,
+            handler: async function (response) {
+              try {
+                const verifyRes = await api.post('/api/wallets/verify_razorpay_payment/', {
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  type: 'RECHARGE'
+                });
+                if (verifyRes.status === 200 && verifyRes.data.success) {
+                  setWalletBalance(parseFloat(verifyRes.data.balance));
+                  setAddingCredits(false);
+                  setCreditAmount('100');
+                  
+                  // Refresh transaction list
+                  const transRes = await api.get('/api/transactions/');
+                  if (transRes.status === 200) {
+                    setInquiries(transRes.data.results || transRes.data);
+                  }
+                  alert("Payment successful! Wallet updated.");
+                }
+              } catch (verErr) {
+                alert("Payment verification failed.");
+              }
+            },
+            prefill: {
+              email: 'user@ulinkup.com'
+            },
+            theme: {
+              color: '#000000'
+            }
+          };
+          const rzp = new window.Razorpay(options);
+          rzp.open();
         }
-        alert(`Successfully recharged wallet with ₹${parsed}!`);
       }
     } catch (err) {
-      alert("Recharge request failed. Please check internet connection.");
+      alert("Order creation failed. Please check backend connection.");
     }
   };
 

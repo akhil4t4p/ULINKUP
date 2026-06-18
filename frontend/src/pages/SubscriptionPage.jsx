@@ -65,14 +65,85 @@ export default function SubscriptionPage() {
     }
     if (tierKey === 'FREE') return;
     setLoading(true);
+
+    const price = tierKey === 'SILVER' ? 499 : 1499;
+
     try {
-      const res = await api.post('/api/subscriptions/', { plan_type: tierKey });
-      if (res.status === 201) {
-        setActiveSub(res.data);
-        alert(`Successfully upgraded to the ${tierKey} plan!`);
+      // 1. Create Razorpay order
+      const res = await api.post('/api/wallets/create_razorpay_order/', {
+        amount: price,
+        type: 'SUBSCRIPTION',
+        plan_type: tierKey
+      });
+
+      if (res.status === 200) {
+        const orderData = res.data;
+
+        // 2. Open payment flow
+        if (orderData.mock) {
+          const confirmPayment = window.confirm(`[MOCK PAYMENTS ENGINE] Simulate payment of ₹${price} for ${tierKey} Subscription?`);
+          if (confirmPayment) {
+            const verifyRes = await api.post('/api/wallets/verify_razorpay_payment/', {
+              razorpay_order_id: orderData.order_id,
+              type: 'SUBSCRIPTION',
+              plan_type: tierKey
+            });
+            if (verifyRes.status === 200 && verifyRes.data.success) {
+              // Fetch updated subscription list
+              const subRes = await api.get('/api/subscriptions/');
+              if (subRes.status === 200) {
+                const list = subRes.data.results || subRes.data;
+                const active = list.find(s => s.is_active);
+                setActiveSub(active || null);
+              }
+              alert(`Successfully upgraded to the ${tierKey} plan (Mock Mode)!`);
+            }
+          }
+        } else {
+          // Open real Razorpay checkout
+          const options = {
+            key: orderData.key_id,
+            amount: parseFloat(orderData.amount) * 100, // in paise
+            currency: 'INR',
+            name: 'ULINKUP Hyperlocal',
+            description: `${tierKey} Subscription Upgrade`,
+            order_id: orderData.order_id,
+            handler: async function (response) {
+              try {
+                const verifyRes = await api.post('/api/wallets/verify_razorpay_payment/', {
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  type: 'SUBSCRIPTION',
+                  plan_type: tierKey
+                });
+                if (verifyRes.status === 200 && verifyRes.data.success) {
+                  // Fetch updated subscription list
+                  const subRes = await api.get('/api/subscriptions/');
+                  if (subRes.status === 200) {
+                    const list = subRes.data.results || subRes.data;
+                    const active = list.find(s => s.is_active);
+                    setActiveSub(active || null);
+                  }
+                  alert(`Successfully upgraded to the ${tierKey} plan!`);
+                }
+              } catch (verErr) {
+                alert("Payment verification failed.");
+              }
+            },
+            prefill: {
+              email: 'user@ulinkup.com'
+            },
+            theme: {
+              color: '#000000'
+            }
+          };
+          const rzp = new window.Razorpay(options);
+          rzp.open();
+        }
       }
     } catch (err) {
-      alert(err.response?.data?.error || "Subscription upgrade failed.");
+      alert("Subscription upgrade order creation failed.");
     } finally {
       setLoading(false);
     }

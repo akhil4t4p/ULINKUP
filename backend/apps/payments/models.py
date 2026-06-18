@@ -19,6 +19,8 @@ class Transaction(models.Model):
         ('RECHARGE', 'Wallet Recharge'),
         ('LEAD_UNLOCK', 'Lead Contact Unlock'),
         ('SUBSCRIPTION', 'Subscription Purchase'),
+        ('VERIFICATION', 'Verification Badge Purchase'),
+        ('FEATURE', 'Featured Listing Purchase'),
     )
     STATUS_CHOICES = (
         ('PENDING', 'Pending'),
