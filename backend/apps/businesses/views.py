@@ -90,6 +90,71 @@ class BusinessProfileViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(profile)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'])
+    def analytics(self, request):
+        try:
+            profile = request.user.business_profile
+        except BusinessProfile.DoesNotExist:
+            return Response({'error': 'Business profile not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # 1. Lead conversions
+        total_leads = profile.leads_received.count()
+        unlocked_leads = profile.leads_received.filter(is_locked=False).count()
+        unlock_rate = (unlocked_leads / total_leads * 100) if total_leads > 0 else 0.0
+
+        # 2. Review metrics
+        reviews = profile.reviews_received.all()
+        review_count = reviews.count()
+        avg_rating = reviews.aggregate(Avg('rating'))['rating__avg'] or 5.0
+
+        rating_dist = {
+            '5': reviews.filter(rating=5).count(),
+            '4': reviews.filter(rating=4).count(),
+            '3': reviews.filter(rating=3).count(),
+            '2': reviews.filter(rating=2).count(),
+            '1': reviews.filter(rating=1).count(),
+        }
+
+        # 3. Advertising stats
+        ads = profile.advertisements.all()
+        total_clicks = sum(ad.clicks for ad in ads)
+        total_views = sum(ad.views for ad in ads)
+        total_spent = sum(ad.budget for ad in ads if ad.status == 'ACTIVE')
+        ctr = (total_clicks / total_views * 100) if total_views > 0 else 0.0
+
+        ad_list = []
+        for ad in ads:
+            ad_ctr = (ad.clicks / ad.views * 100) if ad.views > 0 else 0.0
+            ad_list.append({
+                'id': ad.id,
+                'title': ad.title,
+                'clicks': ad.clicks,
+                'views': ad.views,
+                'budget': str(ad.budget),
+                'status': ad.status,
+                'ctr': round(ad_ctr, 2)
+            })
+
+        return Response({
+            'leads': {
+                'total': total_leads,
+                'unlocked': unlocked_leads,
+                'unlock_rate': round(unlock_rate, 2)
+            },
+            'reviews': {
+                'count': review_count,
+                'average': round(avg_rating, 2),
+                'distribution': rating_dist
+            },
+            'advertising': {
+                'total_clicks': total_clicks,
+                'total_views': total_views,
+                'total_spent': str(total_spent),
+                'ctr': round(ctr, 2),
+                'ads': ad_list
+            }
+        })
+
 class BusinessPortfolioViewSet(viewsets.ModelViewSet):
     queryset = BusinessPortfolio.objects.all()
     serializer_class = BusinessPortfolioSerializer

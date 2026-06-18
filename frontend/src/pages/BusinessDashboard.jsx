@@ -14,6 +14,7 @@ export default function BusinessDashboard() {
   const [leads, setLeads] = useState([]);
   const [wallet, setWallet] = useState({ balance: 0.00 });
   const [subscription, setSubscription] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
 
   // Forms
   const [profileForm, setProfileForm] = useState({
@@ -99,6 +100,16 @@ export default function BusinessDashboard() {
       }
     } catch (err) {
       console.warn("Could not load subscription", err);
+    }
+
+    try {
+      // 6. Fetch Analytics
+      const analRes = await api.get('/api/businesses/analytics/');
+      if (analRes.status === 200) {
+        setAnalytics(analRes.data);
+      }
+    } catch (err) {
+      console.warn("Could not load analytics", err);
     }
 
     setLoading(false);
@@ -320,42 +331,129 @@ export default function BusinessDashboard() {
       {/* TAB CONTENT AREAS */}
       {activeTab === 'overview' && (
         <div>
-          {/* Top Banner Row */}
+          {/* Analytics Overview Metrics */}
           <div className="row g-4 mb-5">
-            {/* Analytics Mini Dashboard */}
-            <div className="col-md-6">
-              <NeomorphicCard className="p-4 h-100 text-center d-flex flex-column justify-content-between">
-                <h5 className="text-muted fw-bold mb-3">LEAD STATISTICS</h5>
+            {/* Lead Stats Card */}
+            <div className="col-md-4">
+              <NeomorphicCard className="p-4 h-100 d-flex flex-column justify-content-between">
                 <div>
-                  <h1 className="fw-black text-primary mb-1">{totalLeadsCount}</h1>
-                  <p className="text-secondary small mb-0">Total Leads Received</p>
+                  <h5 className="text-muted fw-bold mb-3 uppercase small text-center">Lead Conversions</h5>
+                  <div className="text-center my-3">
+                    <h1 className="fw-black text-primary mb-1">{analytics?.leads?.total || totalLeadsCount}</h1>
+                    <p className="text-secondary small mb-0">Total Leads Received</p>
+                  </div>
                 </div>
-                <div className="border-top pt-3 mt-3 text-start small">
-                  <div className="d-flex justify-content-between text-muted">
+                <div className="border-top pt-3 mt-2 small">
+                  <div className="d-flex justify-content-between text-muted mb-2">
                     <span>Unlocked Leads</span>
-                    <span className="fw-bold text-dark">{unlockedLeadsCount}</span>
+                    <span className="fw-bold text-dark">{analytics?.leads?.unlocked || unlockedLeadsCount}</span>
+                  </div>
+                  <div className="d-flex justify-content-between text-muted mb-1">
+                    <span>Unlock Rate</span>
+                    <span className="fw-bold text-primary">{analytics?.leads?.unlock_rate || '0.00'}%</span>
+                  </div>
+                  <div className="neo-inset w-100 bg-white" style={{ height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div className="bg-primary h-100" style={{ width: `${analytics?.leads?.unlock_rate || 0}%` }}></div>
                   </div>
                 </div>
               </NeomorphicCard>
             </div>
 
-            {/* Wallet Balance Card */}
-            <div className="col-md-6">
-              <NeomorphicCard className="p-4 h-100 text-center d-flex flex-column justify-content-between">
-                <h5 className="text-muted fw-bold mb-3">WALLET CREDITS</h5>
+            {/* Review Metrics Card */}
+            <div className="col-md-4">
+              <NeomorphicCard className="p-4 h-100 d-flex flex-column justify-content-between">
                 <div>
-                  <h1 className="fw-black text-primary mb-1">₹{parseFloat(wallet?.balance || 0).toFixed(2)}</h1>
-                  <p className="text-secondary small mb-0">Cost per unlock: ₹15</p>
+                  <h5 className="text-muted fw-bold mb-3 uppercase small text-center">Reviews & Ratings</h5>
+                  <div className="d-flex justify-content-around align-items-center my-2">
+                    <div className="text-center">
+                      <h1 className="fw-black text-warning mb-1">{analytics?.reviews?.average || '5.0'}</h1>
+                      <p className="text-muted small mb-0">Avg Rating</p>
+                    </div>
+                    <div className="text-center">
+                      <h3 className="fw-bold text-dark mb-1">{analytics?.reviews?.count || 0}</h3>
+                      <p className="text-muted small mb-0">Total Reviews</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="border-top pt-3 mt-2">
+                  {['5', '4', '3', '2', '1'].map(star => {
+                    const count = analytics?.reviews?.distribution?.[star] || 0;
+                    const totalReviews = analytics?.reviews?.count || 1;
+                    const pct = (count / totalReviews) * 100;
+                    return (
+                      <div key={star} className="d-flex align-items-center mb-1 gap-2 text-secondary small">
+                        <span className="fw-bold" style={{ width: '40px' }}>{star} Star</span>
+                        <div className="neo-inset flex-grow-1 bg-white" style={{ height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div className="bg-warning h-100" style={{ width: `${pct}%` }}></div>
+                        </div>
+                        <span style={{ width: '25px', textAlign: 'right' }}>{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </NeomorphicCard>
+            </div>
+
+            {/* Wallet & Quick Actions Card */}
+            <div className="col-md-4">
+              <NeomorphicCard className="p-4 h-100 d-flex flex-column justify-content-between text-center">
+                <div>
+                  <h5 className="text-muted fw-bold mb-3 uppercase small">Wallet & Credits</h5>
+                  <div className="my-3">
+                    <h1 className="fw-black text-primary mb-1">₹{parseFloat(wallet?.balance || 0).toFixed(2)}</h1>
+                    <p className="text-secondary small mb-0">Cost per unlock: ₹15</p>
+                  </div>
                 </div>
                 <button 
                   onClick={handleQuickRecharge} 
-                  className="neo-btn py-3 w-100 mt-3 small"
+                  className="neo-btn py-3 w-100 mt-2 small"
                 >
                   Quick Recharge (₹100)
                 </button>
               </NeomorphicCard>
             </div>
           </div>
+
+          {/* Advertising Campaigns Analytics */}
+          <NeomorphicCard className="p-4 mb-5" elevation="convex">
+            <h4 className="fw-bold mb-3"><i className="bi bi-megaphone-fill text-primary"></i> Hyperlocal Ad Campaigns Analytics</h4>
+            {analytics?.advertising?.ads && analytics.advertising.ads.length > 0 ? (
+              <div className="table-responsive">
+                <table className="table table-borderless align-middle small text-muted">
+                  <thead>
+                    <tr className="border-bottom text-secondary">
+                      <th>Campaign Title</th>
+                      <th className="text-center">Views / Impressions</th>
+                      <th className="text-center">Clicks</th>
+                      <th className="text-center">CTR (Click Rate)</th>
+                      <th className="text-end">Budget</th>
+                      <th className="text-end">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analytics.advertising.ads.map(ad => (
+                      <tr key={ad.id} className="border-bottom">
+                        <td className="fw-bold text-dark">{ad.title}</td>
+                        <td className="text-center">{ad.views}</td>
+                        <td className="text-center">{ad.clicks}</td>
+                        <td className="text-center fw-bold text-primary">{ad.ctr}%</td>
+                        <td className="text-end">₹{ad.budget}</td>
+                        <td className="text-end">
+                          <span className={`badge ${ad.status === 'ACTIVE' ? 'bg-success' : 'bg-secondary'} rounded-pill px-3 py-1`}>
+                            {ad.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-4 text-muted small">
+                No active advertising campaigns. Toggle settings to purchase sponsored ads.
+              </div>
+            )}
+          </NeomorphicCard>
 
           {/* Leads Section */}
           <h3 className="mb-4 d-flex align-items-center gap-2">
