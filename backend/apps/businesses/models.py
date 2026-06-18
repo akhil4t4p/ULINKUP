@@ -39,6 +39,9 @@ class BusinessProfile(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['category', 'is_available']),
+            models.Index(fields=['experience']),
+            models.Index(fields=['hourly_rate']),
+            models.Index(fields=['location']),
         ]
 
     def __str__(self):

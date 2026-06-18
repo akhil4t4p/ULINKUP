@@ -16,6 +16,7 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
     portfolio_items = BusinessPortfolioSerializer(many=True, read_only=True)
+    rating = serializers.FloatField(read_only=True)
 
     class Meta:
         model = BusinessProfile
@@ -23,9 +24,9 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'category', 'category_name', 
             'about', 'hourly_rate', 'experience', 'location', 
             'is_available', 'profile_photo', 'work_timings', 'service_areas',
-            'portfolio_items', 'created_at', 'updated_at'
+            'portfolio_items', 'rating', 'created_at', 'updated_at'
         )
-        read_only_fields = ('id', 'created_at', 'updated_at', 'portfolio_items')
+        read_only_fields = ('id', 'created_at', 'updated_at', 'portfolio_items', 'rating')
 
 class LeadSerializer(serializers.ModelSerializer):
     customer_name = serializers.SerializerMethodField()

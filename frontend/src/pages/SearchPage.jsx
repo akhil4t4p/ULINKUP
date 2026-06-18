@@ -14,6 +14,8 @@ export default function SearchPage() {
   // Custom Filter State
   const [minRating, setMinRating] = useState(4.0);
   const [minExp, setMinExp] = useState(0);
+  const [maxRate, setMaxRate] = useState(1500);
+  const [isAvailableOnly, setIsAvailableOnly] = useState(false);
 
   // Loaded DB data
   const [categories, setCategories] = useState([]);
@@ -60,33 +62,33 @@ export default function SearchPage() {
         if (query) params.q = query;
         if (location) params.loc = location;
         if (category) params.category = category;
+        if (minRating) params.min_rating = minRating;
+        if (minExp) params.min_exp = minExp;
+        if (maxRate) params.max_rate = maxRate;
+        if (isAvailableOnly) params.is_available = 'true';
 
         const res = await api.get('/api/businesses/', { params });
         if (res.status === 200) {
-          const results = res.data.results || res.data;
-          
-          // Apply client-side filters (ratings and experience)
-          const filtered = results.filter(p => {
-            const ratingVal = p.rating ? parseFloat(p.rating) : 5.0; // default 5 star
-            const expVal = p.experience ? parseInt(p.experience) : 0;
-            return ratingVal >= minRating && expVal >= minExp;
-          });
-          setProviders(filtered);
+          setProviders(res.data.results || res.data);
         }
       } catch (err) {
         console.warn("Search query failed, using development fallback", err);
         // Fallback stub list
         const STUBS = [
-          { id: 1, name: 'Apex Plumbing Solutions', category_name: 'Plumber', rating: 4.9, experience: 8, location: 'Bandra, Mumbai', verified: true, hourly_rate: '400' },
-          { id: 2, name: 'Dr. Sarah Carter (Physics)', category_name: 'Tutor', rating: 4.8, experience: 12, location: 'Indiranagar, Bangalore', verified: true, hourly_rate: '800' },
-          { id: 3, name: 'VoltMaster Electricals', category_name: 'Electrician', rating: 4.7, experience: 5, location: 'Salt Lake, Kolkata', verified: false, hourly_rate: '350' },
-          { id: 4, name: 'Quick Shine Cleaning', category_name: 'Cleaner', rating: 4.5, experience: 3, location: 'Bandra, Mumbai', verified: false, hourly_rate: '250' }
+          { id: 1, name: 'Apex Plumbing Solutions', category_name: 'Plumber', rating: 4.9, experience: 8, location: 'Bandra, Mumbai', verified: true, hourly_rate: '400', is_available: true },
+          { id: 2, name: 'Dr. Sarah Carter (Physics)', category_name: 'Tutor', rating: 4.8, experience: 12, location: 'Indiranagar, Bangalore', verified: true, hourly_rate: '800', is_available: true },
+          { id: 3, name: 'VoltMaster Electricals', category_name: 'Electrician', rating: 4.7, experience: 5, location: 'Salt Lake, Kolkata', verified: false, hourly_rate: '350', is_available: false },
+          { id: 4, name: 'Quick Shine Cleaning', category_name: 'Cleaner', rating: 4.5, experience: 3, location: 'Bandra, Mumbai', verified: false, hourly_rate: '250', is_available: true }
         ];
         const filtered = STUBS.filter(p => {
           const matchQuery = query ? (p.name.toLowerCase().includes(query.toLowerCase()) || p.category_name.toLowerCase().includes(query.toLowerCase())) : true;
           const matchLoc = location ? p.location.toLowerCase().includes(location.toLowerCase()) : true;
           const matchCat = category ? p.category_name === category : true;
-          return matchQuery && matchLoc && matchCat && p.rating >= minRating && p.experience >= minExp;
+          const matchRating = p.rating >= minRating;
+          const matchExp = p.experience >= minExp;
+          const matchRate = parseFloat(p.hourly_rate) <= maxRate;
+          const matchAvail = isAvailableOnly ? p.is_available : true;
+          return matchQuery && matchLoc && matchCat && matchRating && matchExp && matchRate && matchAvail;
         });
         setProviders(filtered);
       } finally {
@@ -95,7 +97,7 @@ export default function SearchPage() {
     };
 
     fetchProviders();
-  }, [query, location, category, minRating, minExp]);
+  }, [query, location, category, minRating, minExp, maxRate, isAvailableOnly]);
 
   const clearFilters = () => {
     setQuery('');
@@ -103,6 +105,8 @@ export default function SearchPage() {
     setCategory('');
     setMinRating(4.0);
     setMinExp(0);
+    setMaxRate(1500);
+    setIsAvailableOnly(false);
     setSearchParams({});
   };
 
@@ -193,6 +197,37 @@ export default function SearchPage() {
                 value={minExp}
                 onChange={(e) => setMinExp(parseInt(e.target.value))}
               />
+            </div>
+
+            {/* Max Hourly Rate Filter Slider */}
+            <div className="mb-3">
+              <div className="d-flex justify-content-between mb-1">
+                <label className="form-label fw-bold text-secondary mb-0">Max Hourly Rate</label>
+                <span className="fw-bold text-primary">₹{maxRate}/hr</span>
+              </div>
+              <input 
+                type="range" 
+                className="form-range" 
+                min="100" 
+                max="2000" 
+                step="50" 
+                value={maxRate}
+                onChange={(e) => setMaxRate(parseInt(e.target.value))}
+              />
+            </div>
+
+            {/* Availability Filter Checkbox */}
+            <div className="form-check form-switch mt-4">
+              <input 
+                type="checkbox" 
+                className="form-check-input"
+                id="isAvailableOnlySwitch"
+                checked={isAvailableOnly}
+                onChange={(e) => setIsAvailableOnly(e.target.checked)}
+              />
+              <label className="form-check-label fw-bold text-secondary" htmlFor="isAvailableOnlySwitch">
+                Available Providers Only
+              </label>
             </div>
           </NeomorphicCard>
         </div>

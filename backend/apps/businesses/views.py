@@ -1,6 +1,9 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.db import connection
+from django.db.models import Avg, Value
+from django.db.models.functions import Coalesce
 from .models import Category, BusinessProfile, BusinessPortfolio, Lead
 from .serializers import CategorySerializer, BusinessProfileSerializer, BusinessPortfolioSerializer, LeadSerializer
 
@@ -15,19 +18,52 @@ class BusinessProfileViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
-        queryset = BusinessProfile.objects.all()
+        # Annotate with average reviews rating, coalesced to 5.0
+        queryset = BusinessProfile.objects.annotate(
+            avg_rating=Coalesce(Avg('reviews_received__rating'), Value(5.0))
+        )
         
-        # Search and filters (supports Phase 9 search queries)
+        # Search queries
         q = self.request.query_params.get('q', None)
         loc = self.request.query_params.get('loc', None)
         category = self.request.query_params.get('category', None)
+        min_rating = self.request.query_params.get('min_rating', None)
+        min_exp = self.request.query_params.get('min_exp', None)
+        max_rate = self.request.query_params.get('max_rate', None)
+        is_available = self.request.query_params.get('is_available', None)
         
+        # PostgreSQL Vector Full-Text Search with Relevancy Rank
         if q:
-            queryset = queryset.filter(about__icontains=q) | queryset.filter(user__username__icontains=q)
+            if connection.vendor == 'postgresql':
+                from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
+                vector = SearchVector('about', weight='A') + \
+                         SearchVector('user__username', weight='B') + \
+                         SearchVector('service_areas', weight='C') + \
+                         SearchVector('work_timings', weight='D')
+                query = SearchQuery(q)
+                queryset = queryset.annotate(rank=SearchRank(vector, query)).filter(rank__gte=0.1).order_by('-rank')
+            else:
+                # Fallback to standard SQLite/MySQL contains searches for local development offline support
+                queryset = queryset.filter(
+                    about__icontains=q) | queryset.filter(
+                    user__username__icontains=q) | queryset.filter(
+                    service_areas__icontains=q) | queryset.filter(
+                    work_timings__icontains=q)
+        
+        # Apply filters
         if loc:
             queryset = queryset.filter(location__icontains=loc)
         if category:
             queryset = queryset.filter(category__name__iexact=category)
+        if min_rating:
+            queryset = queryset.filter(avg_rating__gte=float(min_rating))
+        if min_exp:
+            queryset = queryset.filter(experience__gte=int(min_exp))
+        if max_rate:
+            queryset = queryset.filter(hourly_rate__lte=float(max_rate))
+        if is_available is not None:
+            val = is_available.lower() in ['true', '1', 't']
+            queryset = queryset.filter(is_available=val)
             
         return queryset
 
