@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Page Imports
 import LandingPage from './pages/LandingPage';
@@ -22,8 +23,25 @@ export default function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/select-account" element={<AccountSelection />} />
-            <Route path="/customer/dashboard" element={<CustomerDashboard />} />
-            <Route path="/business/dashboard" element={<BusinessDashboard />} />
+            
+            {/* Protected Routes */}
+            <Route 
+              path="/customer/dashboard" 
+              element={
+                <ProtectedRoute allowedRoles={['CUSTOMER']}>
+                  <CustomerDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/business/dashboard" 
+              element={
+                <ProtectedRoute allowedRoles={['BUSINESS']}>
+                  <BusinessDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            
             <Route path="/search" element={<SearchPage />} />
             <Route path="/profile/:id" element={<ProfilePage />} />
             <Route path="/subscriptions" element={<SubscriptionPage />} />

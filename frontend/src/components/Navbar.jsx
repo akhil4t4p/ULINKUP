@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 
 export default function Navbar() {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+  const { user, isAuthenticated, logout } = useContext(AuthContext);
   const location = useLocation();
 
   useEffect(() => {
@@ -46,16 +48,20 @@ export default function Navbar() {
                 Plans
               </Link>
             </li>
-            <li className="nav-item">
-              <Link className={`nav-link px-3 py-2 neo-btn ${isActive('/customer/dashboard') ? 'active' : ''}`} to="/customer/dashboard">
-                Customer Port
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link className={`nav-link px-3 py-2 neo-btn ${isActive('/business/dashboard') ? 'active' : ''}`} to="/business/dashboard">
-                Business Port
-              </Link>
-            </li>
+            {isAuthenticated && user.role === 'CUSTOMER' && (
+              <li className="nav-item">
+                <Link className={`nav-link px-3 py-2 neo-btn ${isActive('/customer/dashboard') ? 'active' : ''}`} to="/customer/dashboard">
+                  Customer Port
+                </Link>
+              </li>
+            )}
+            {isAuthenticated && user.role === 'BUSINESS' && (
+              <li className="nav-item">
+                <Link className={`nav-link px-3 py-2 neo-btn ${isActive('/business/dashboard') ? 'active' : ''}`} to="/business/dashboard">
+                  Business Port
+                </Link>
+              </li>
+            )}
           </ul>
           
           <div className="d-flex align-items-center gap-3">
@@ -68,9 +74,21 @@ export default function Navbar() {
               {theme === 'light' ? <i className="bi bi-moon-stars-fill"></i> : <i className="bi bi-sun-fill text-warning"></i>}
             </button>
             
-            <Link to="/login" className="neo-btn-accent text-decoration-none">
-              Sign In
-            </Link>
+            {isAuthenticated ? (
+              <div className="d-flex align-items-center gap-3">
+                <div className="text-end d-none d-sm-block">
+                  <div className="fw-bold small text-primary">{user.email}</div>
+                  <span className="neo-badge py-0 px-2" style={{ fontSize: '0.7rem' }}>{user.role}</span>
+                </div>
+                <button onClick={logout} className="neo-btn border-dark text-dark font-weight-bold">
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <Link to="/login" className="neo-btn-accent text-decoration-none">
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
       </div>

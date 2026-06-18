@@ -4,3 +4,6 @@ django-cors-headers
 django-environ
 psycopg[binary]
 djangorestframework-simplejwt
+django-allauth
+dj-rest-auth[with_social]
+google-auth
