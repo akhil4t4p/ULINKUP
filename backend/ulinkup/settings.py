@@ -37,6 +37,12 @@ INSTALLED_APPS = [
     
     # Custom Apps
     'apps.users.apps.UsersConfig',
+    'apps.customers.apps.CustomersConfig',
+    'apps.businesses.apps.BusinessesConfig',
+    'apps.reviews.apps.ReviewsConfig',
+    'apps.payments.apps.PaymentsConfig',
+    'apps.ads.apps.AdsConfig',
+    'apps.subscriptions.apps.SubscriptionsConfig',
     
     # Third Party Apps
     'rest_framework',
