@@ -206,46 +206,48 @@ export default function ProfilePage() {
             {provider.about || "No description provided yet by the professional."}
           </p>
         </div>
+
+        {/* Work Timings & Service Areas */}
+        <div className="row g-3 mt-3 border-top pt-3">
+          {provider.work_timings && (
+            <div className="col-md-6 small text-muted">
+              <i className="bi bi-clock-fill text-primary me-2"></i>
+              <strong>Timings:</strong> {provider.work_timings}
+            </div>
+          )}
+          {provider.service_areas && (
+            <div className="col-md-6 small text-muted">
+              <i className="bi bi-geo-fill text-success me-2"></i>
+              <strong>Areas Serviced:</strong> {provider.service_areas}
+            </div>
+          )}
+        </div>
       </NeomorphicCard>
 
       {/* Portfolio Showcase */}
       <div className="mb-5">
         <h3 className="mb-4"><i className="bi bi-images text-primary"></i> Recent Project Portfolio</h3>
-        <div className="row g-4">
-          <div className="col-md-4">
-            <NeomorphicCard className="p-0 overflow-hidden h-100" elevation="convex">
-              <div className="bg-dark text-white d-flex align-items-center justify-content-center" style={{ height: '200px' }}>
-                <i className="bi bi-check2-circle fs-1"></i>
+        {provider.portfolio_items && provider.portfolio_items.length > 0 ? (
+          <div className="row g-4">
+            {provider.portfolio_items.map(item => (
+              <div key={item.id} className="col-md-4">
+                <NeomorphicCard className="p-0 overflow-hidden h-100" elevation="convex">
+                  <div className="bg-dark text-white d-flex align-items-center justify-content-center" style={{ height: '200px', overflow: 'hidden' }}>
+                    <img src={item.image} alt={item.title} className="w-100 h-100" style={{ objectFit: 'cover' }} />
+                  </div>
+                  <div className="p-4">
+                    <h5 className="fw-bold mb-1">{item.title}</h5>
+                    <p className="text-muted small mb-0">{item.description}</p>
+                  </div>
+                </NeomorphicCard>
               </div>
-              <div className="p-4">
-                <h5 className="fw-bold mb-1">Standard Project A</h5>
-                <p className="text-muted small mb-0">Delivered successfully in hyperlocal range.</p>
-              </div>
-            </NeomorphicCard>
+            ))}
           </div>
-          <div className="col-md-4">
-            <NeomorphicCard className="p-0 overflow-hidden h-100" elevation="convex">
-              <div className="bg-secondary text-white d-flex align-items-center justify-content-center" style={{ height: '200px' }}>
-                <i className="bi bi-award fs-1"></i>
-              </div>
-              <div className="p-4">
-                <h5 className="fw-bold mb-1">Commercial Fitting B</h5>
-                <p className="text-muted small mb-0">Verified client audit and checkout completed.</p>
-              </div>
-            </NeomorphicCard>
-          </div>
-          <div className="col-md-4">
-            <NeomorphicCard className="p-0 overflow-hidden h-100" elevation="convex">
-              <div className="bg-dark text-white d-flex align-items-center justify-content-center" style={{ height: '200px' }}>
-                <i className="bi bi-activity fs-1"></i>
-              </div>
-              <div className="p-4">
-                <h5 className="fw-bold mb-1">Custom Overhaul C</h5>
-                <p className="text-muted small mb-0">Completed with complete parts integration.</p>
-              </div>
-            </NeomorphicCard>
-          </div>
-        </div>
+        ) : (
+          <NeomorphicCard elevation="inset" className="p-5 text-center text-muted">
+            No portfolio items uploaded by the provider.
+          </NeomorphicCard>
+        )}
       </div>
 
       <div className="row g-5">

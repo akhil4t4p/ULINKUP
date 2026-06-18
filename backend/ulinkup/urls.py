@@ -11,7 +11,7 @@ from rest_framework_simplejwt.views import (
 # Views Imports
 from apps.users.views import GoogleLogin, developer_mock_login
 from apps.customers.views import CustomerProfileViewSet
-from apps.businesses.views import CategoryViewSet, BusinessProfileViewSet
+from apps.businesses.views import CategoryViewSet, BusinessProfileViewSet, BusinessPortfolioViewSet, LeadViewSet
 from apps.reviews.views import ReviewViewSet
 from apps.payments.views import WalletViewSet, TransactionViewSet
 from apps.ads.views import AdvertisementViewSet
@@ -22,6 +22,8 @@ router = DefaultRouter()
 router.register('customers', CustomerProfileViewSet, basename='customer')
 router.register('categories', CategoryViewSet, basename='category')
 router.register('businesses', BusinessProfileViewSet, basename='business')
+router.register('portfolio', BusinessPortfolioViewSet, basename='portfolio')
+router.register('leads', LeadViewSet, basename='lead')
 router.register('reviews', ReviewViewSet, basename='review')
 router.register('wallets', WalletViewSet, basename='wallet')
 router.register('transactions', TransactionViewSet, basename='transaction')

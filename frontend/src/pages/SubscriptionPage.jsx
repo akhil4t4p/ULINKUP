@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import NeomorphicCard from '../components/NeomorphicCard';
+import { AuthContext } from '../context/AuthContext';
+import api from '../utils/api';
 
 const TIERS = [
   {
+    key: 'FREE',
     name: 'Free Starter',
     price: '₹0',
     period: 'forever',
@@ -12,6 +15,7 @@ const TIERS = [
     cta: 'Current Plan'
   },
   {
+    key: 'SILVER',
     name: 'Silver Growth',
     price: '₹499',
     period: 'monthly',
@@ -21,6 +25,7 @@ const TIERS = [
     cta: 'Upgrade to Silver'
   },
   {
+    key: 'GOLD',
     name: 'Gold Enterprise',
     price: '₹1499',
     period: 'monthly',
@@ -32,6 +37,47 @@ const TIERS = [
 ];
 
 export default function SubscriptionPage() {
+  const { isAuthenticated } = useContext(AuthContext);
+  const [activeSub, setActiveSub] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchActiveSubscription = async () => {
+      if (!isAuthenticated) return;
+      try {
+        const res = await api.get('/api/subscriptions/');
+        if (res.status === 200) {
+          const list = res.data.results || res.data;
+          const active = list.find(s => s.is_active);
+          setActiveSub(active || null);
+        }
+      } catch (err) {
+        console.warn("Could not fetch active subscription", err);
+      }
+    };
+    fetchActiveSubscription();
+  }, [isAuthenticated]);
+
+  const handleSubscribe = async (tierKey) => {
+    if (!isAuthenticated) {
+      alert("Please sign in to change your plan.");
+      return;
+    }
+    if (tierKey === 'FREE') return;
+    setLoading(true);
+    try {
+      const res = await api.post('/api/subscriptions/', { plan_type: tierKey });
+      if (res.status === 201) {
+        setActiveSub(res.data);
+        alert(`Successfully upgraded to the ${tierKey} plan!`);
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || "Subscription upgrade failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="container py-5">
       <div className="text-center mb-5">
@@ -40,45 +86,50 @@ export default function SubscriptionPage() {
       </div>
 
       <div className="row g-4 justify-content-center">
-        {TIERS.map((tier, idx) => (
-          <div key={idx} className="col-md-6 col-lg-4">
-            <NeomorphicCard 
-              elevation={tier.accent ? 'concave' : 'convex'} 
-              className={`p-5 h-100 d-flex flex-column justify-content-between ${tier.accent ? 'border border-dark border-3' : ''}`}
-            >
-              <div>
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h4 className="fw-bold mb-0">{tier.name}</h4>
-                  {tier.accent && <span className="badge bg-dark text-white rounded-pill px-3 py-1">Best Value</span>}
-                </div>
-                
-                <p className="text-muted small mb-4">{tier.desc}</p>
-                
-                <div className="mb-4">
-                  <span className="display-4 fw-black font-monospace">{tier.price}</span>
-                  <span className="text-muted"> / {tier.period}</span>
-                </div>
-                
-                <hr className="my-4 opacity-25" />
-                
-                <ul className="list-unstyled d-flex flex-column gap-3 mb-4">
-                  {tier.features.map((feat, fIdx) => (
-                    <li key={fIdx} className="small d-flex align-items-start gap-2 text-secondary">
-                      <i className="bi bi-check-circle-fill text-success mt-1"></i>
-                      <span>{feat}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <button 
-                className={`w-100 py-3 ${tier.accent ? 'neo-btn-accent text-white' : 'neo-btn'}`}
+        {TIERS.map((tier, idx) => {
+          const isCurrent = (tier.key === 'FREE' && !activeSub) || (activeSub && activeSub.plan_type === tier.key);
+          return (
+            <div key={idx} className="col-md-6 col-lg-4">
+              <NeomorphicCard 
+                elevation={tier.accent ? 'concave' : 'convex'} 
+                className={`p-5 h-100 d-flex flex-column justify-content-between ${tier.accent ? 'border border-dark border-3' : ''}`}
               >
-                {tier.cta}
-              </button>
-            </NeomorphicCard>
-          </div>
-        ))}
+                <div>
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <h4 className="fw-bold mb-0">{tier.name}</h4>
+                    {tier.accent && <span className="badge bg-dark text-white rounded-pill px-3 py-1">Best Value</span>}
+                  </div>
+                  
+                  <p className="text-muted small mb-4">{tier.desc}</p>
+                  
+                  <div className="mb-4">
+                    <span className="display-4 fw-black font-monospace">{tier.price}</span>
+                    <span className="text-muted"> / {tier.period}</span>
+                  </div>
+                  
+                  <hr className="my-4 opacity-25" />
+                  
+                  <ul className="list-unstyled d-flex flex-column gap-3 mb-4">
+                    {tier.features.map((feat, fIdx) => (
+                      <li key={fIdx} className="small d-flex align-items-start gap-2 text-secondary">
+                        <i className="bi bi-check-circle-fill text-success mt-1"></i>
+                        <span>{feat}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <button 
+                  disabled={isCurrent || loading}
+                  onClick={() => handleSubscribe(tier.key)}
+                  className={`w-100 py-3 ${tier.accent ? 'neo-btn-accent text-white border-0' : 'neo-btn'} ${isCurrent ? 'active border-dark' : ''}`}
+                >
+                  {isCurrent ? 'Current Plan' : tier.cta}
+                </button>
+              </NeomorphicCard>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
