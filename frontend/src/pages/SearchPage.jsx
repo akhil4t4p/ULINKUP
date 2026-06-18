@@ -1,15 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import NeomorphicCard from '../components/NeomorphicCard';
-
-const PROVIDERS = [
-  { id: 1, name: 'Apex Plumbing Solutions', category: 'Plumber', rating: 4.9, experience: 8, loc: 'Bandra, Mumbai', verified: true, price: '₹400/hr' },
-  { id: 2, name: 'Dr. Sarah Carter (Physics)', category: 'Tutor', rating: 4.8, experience: 12, loc: 'Indiranagar, Bangalore', verified: true, price: '₹800/hr' },
-  { id: 3, name: 'VoltMaster Electricals', category: 'Electrician', rating: 4.7, experience: 5, loc: 'Salt Lake, Kolkata', verified: false, price: '₹350/hr' },
-  { id: 4, name: 'Quick Shine Cleaning', category: 'Cleaner', rating: 4.5, experience: 3, loc: 'Bandra, Mumbai', verified: false, price: '₹250/hr' },
-  { id: 5, name: 'Monochrome Pixels', category: 'Web Designer', rating: 4.9, experience: 6, loc: 'Juhu, Mumbai', verified: true, price: '₹1200/hr' },
-  { id: 6, name: 'Glow Up Hair Salon', category: 'Salon & Spa', rating: 4.2, experience: 4, loc: 'Indiranagar, Bangalore', verified: false, price: '₹500/hr' }
-];
+import api from '../utils/api';
 
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -23,6 +15,11 @@ export default function SearchPage() {
   const [minRating, setMinRating] = useState(4.0);
   const [minExp, setMinExp] = useState(0);
 
+  // Loaded DB data
+  const [categories, setCategories] = useState([]);
+  const [providers, setProviders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   // Sync state if searchParams change
   useEffect(() => {
     setQuery(searchParams.get('q') || '');
@@ -30,15 +27,75 @@ export default function SearchPage() {
     setCategory(searchParams.get('category') || '');
   }, [searchParams]);
 
-  // Filter listings logic
-  const filteredProviders = PROVIDERS.filter(p => {
-    const matchQuery = query ? (p.name.toLowerCase().includes(query.toLowerCase()) || p.category.toLowerCase().includes(query.toLowerCase())) : true;
-    const matchLoc = location ? p.loc.toLowerCase().includes(location.toLowerCase()) : true;
-    const matchCat = category ? p.category === category : true;
-    const matchRating = p.rating >= minRating;
-    const matchExp = p.experience >= minExp;
-    return matchQuery && matchLoc && matchCat && matchRating && matchExp;
-  });
+  // Fetch categories on load
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await api.get('/api/categories/');
+        if (res.status === 200) {
+          setCategories(res.data.results || res.data);
+        }
+      } catch (err) {
+        console.warn("Could not load categories from backend, using stubs", err);
+        setCategories([
+          { name: 'Plumber', slug: 'plumber' },
+          { name: 'Electrician', slug: 'electrician' },
+          { name: 'Tutor', slug: 'tutor' },
+          { name: 'Cleaner', slug: 'cleaner' },
+          { name: 'Web Designer', slug: 'designer' },
+          { name: 'Salon & Spa', slug: 'salon' }
+        ]);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // Fetch search results on filters update
+  useEffect(() => {
+    const fetchProviders = async () => {
+      setLoading(true);
+      try {
+        // Construct query parameters
+        const params = {};
+        if (query) params.q = query;
+        if (location) params.loc = location;
+        if (category) params.category = category;
+
+        const res = await api.get('/api/businesses/', { params });
+        if (res.status === 200) {
+          const results = res.data.results || res.data;
+          
+          // Apply client-side filters (ratings and experience)
+          const filtered = results.filter(p => {
+            const ratingVal = p.rating ? parseFloat(p.rating) : 5.0; // default 5 star
+            const expVal = p.experience ? parseInt(p.experience) : 0;
+            return ratingVal >= minRating && expVal >= minExp;
+          });
+          setProviders(filtered);
+        }
+      } catch (err) {
+        console.warn("Search query failed, using development fallback", err);
+        // Fallback stub list
+        const STUBS = [
+          { id: 1, name: 'Apex Plumbing Solutions', category_name: 'Plumber', rating: 4.9, experience: 8, location: 'Bandra, Mumbai', verified: true, hourly_rate: '400' },
+          { id: 2, name: 'Dr. Sarah Carter (Physics)', category_name: 'Tutor', rating: 4.8, experience: 12, location: 'Indiranagar, Bangalore', verified: true, hourly_rate: '800' },
+          { id: 3, name: 'VoltMaster Electricals', category_name: 'Electrician', rating: 4.7, experience: 5, location: 'Salt Lake, Kolkata', verified: false, hourly_rate: '350' },
+          { id: 4, name: 'Quick Shine Cleaning', category_name: 'Cleaner', rating: 4.5, experience: 3, location: 'Bandra, Mumbai', verified: false, hourly_rate: '250' }
+        ];
+        const filtered = STUBS.filter(p => {
+          const matchQuery = query ? (p.name.toLowerCase().includes(query.toLowerCase()) || p.category_name.toLowerCase().includes(query.toLowerCase())) : true;
+          const matchLoc = location ? p.location.toLowerCase().includes(location.toLowerCase()) : true;
+          const matchCat = category ? p.category_name === category : true;
+          return matchQuery && matchLoc && matchCat && p.rating >= minRating && p.experience >= minExp;
+        });
+        setProviders(filtered);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProviders();
+  }, [query, location, category, minRating, minExp]);
 
   const clearFilters = () => {
     setQuery('');
@@ -98,12 +155,9 @@ export default function SearchPage() {
                 onChange={(e) => setCategory(e.target.value)}
               >
                 <option value="">All Categories</option>
-                <option value="Plumber">Plumber</option>
-                <option value="Electrician">Electrician</option>
-                <option value="Tutor">Tutor</option>
-                <option value="Cleaner">Cleaner</option>
-                <option value="Web Designer">Web Designer</option>
-                <option value="Salon & Spa">Salon & Spa</option>
+                {categories.map(cat => (
+                  <option key={cat.slug} value={cat.name}>{cat.name}</option>
+                ))}
               </select>
             </div>
 
@@ -146,39 +200,43 @@ export default function SearchPage() {
         {/* Search Listings Grid */}
         <div className="col-lg-8">
           <div className="d-flex justify-content-between align-items-center mb-4">
-            <span className="text-secondary">{filteredProviders.length} Professionals found</span>
+            <span className="text-secondary">{providers.length} Professionals found</span>
             <div className="text-muted small">Showing local results</div>
           </div>
 
-          {filteredProviders.length > 0 ? (
+          {loading ? (
+            <div className="text-center py-5">
+              <div className="spinner-border text-primary" role="status"></div>
+            </div>
+          ) : providers.length > 0 ? (
             <div className="row g-4">
-              {filteredProviders.map(p => (
+              {providers.map(p => (
                 <div key={p.id} className="col-md-6">
                   <NeomorphicCard className="p-4 h-100 d-flex flex-column justify-content-between">
                     <div>
                       <div className="d-flex justify-content-between align-items-start mb-2">
-                        <span className="neo-badge text-primary">{p.category}</span>
+                        <span className="neo-badge text-primary">{p.category_name}</span>
                         <div className="text-warning fw-bold small">
-                          <i className="bi bi-star-fill"></i> {p.rating}
+                          <i className="bi bi-star-fill"></i> {p.rating || 5.0}
                         </div>
                       </div>
                       
                       <h4 className="fw-bold mb-1 d-flex align-items-center gap-2">
-                        {p.name}
+                        {p.name || p.username}
                         {p.verified && <i className="bi bi-patch-check-fill text-primary" title="Verified Provider"></i>}
                       </h4>
                       <p className="text-muted small mb-3">
-                        <i className="bi bi-geo-alt-fill me-1"></i> {p.loc}
+                        <i className="bi bi-geo-alt-fill me-1"></i> {p.location || 'Local'}
                       </p>
                       
                       <div className="neo-inset p-3 bg-white mb-3" style={{ borderRadius: '12px' }}>
                         <div className="small d-flex justify-content-between text-muted mb-1">
                           <span>Experience</span>
-                          <span className="fw-bold text-dark">{p.experience} Years</span>
+                          <span className="fw-bold text-dark">{p.experience || 0} Years</span>
                         </div>
                         <div className="small d-flex justify-content-between text-muted">
                           <span>Est. Rate</span>
-                          <span className="fw-bold text-dark">{p.price}</span>
+                          <span className="fw-bold text-dark">₹{p.hourly_rate || '0'}/hr</span>
                         </div>
                       </div>
                     </div>
