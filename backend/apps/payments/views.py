@@ -17,11 +17,15 @@ class WalletViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def recharge(self, request):
         amount = request.data.get('amount')
-        if not amount or float(amount) <= 0:
+        try:
+            val = float(amount)
+            if val <= 0:
+                raise ValueError
+        except (TypeError, ValueError):
             return Response({'error': 'Invalid amount'}, status=status.HTTP_400_BAD_REQUEST)
         
         wallet, created = Wallet.objects.get_or_create(user=request.user)
-        wallet.balance += Decimal(amount)
+        wallet.balance += Decimal(str(val))
         wallet.save()
 
         # Record the transaction
@@ -69,7 +73,11 @@ class WalletViewSet(viewsets.ModelViewSet):
         payment_type = request.data.get('type', 'RECHARGE')
         plan_type = request.data.get('plan_type', '')
 
-        if not amount or float(amount) <= 0:
+        try:
+            val = float(amount)
+            if val <= 0:
+                raise ValueError
+        except (TypeError, ValueError):
             return Response({'error': 'Invalid amount'}, status=status.HTTP_400_BAD_REQUEST)
 
         from django.conf import settings

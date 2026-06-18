@@ -178,7 +178,9 @@ REST_AUTH = {
     'USER_DETAILS_SERIALIZER': 'apps.users.serializers.UserSerializer',
     'JWT_AUTH_COOKIE': 'ulinkup-auth',
     'JWT_AUTH_REFRESH_COOKIE': 'ulinkup-refresh',
-    'JWT_AUTH_HTTPONLY': False,
+    'JWT_AUTH_HTTPONLY': True,
+    'JWT_AUTH_SECURE': not DEBUG,
+    'JWT_AUTH_SAMESITE': 'Lax',
 }
 
 # Allauth configuration settings
@@ -210,3 +212,20 @@ if CLOUDINARY_STORAGE['CLOUD_NAME'] and CLOUDINARY_STORAGE['API_KEY']:
 # Razorpay Configuration
 RAZORPAY_KEY_ID = env('RAZORPAY_KEY_ID', default='')
 RAZORPAY_KEY_SECRET = env('RAZORPAY_KEY_SECRET', default='')
+
+# Security Enforcements & Secure Headers (OWASP Protection)
+SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=not DEBUG)
+SECURE_HSTS_SECONDS = env.int('SECURE_HSTS_SECONDS', default=31536000 if not DEBUG else 0)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=not DEBUG)
+SECURE_HSTS_PRELOAD = env.bool('SECURE_HSTS_PRELOAD', default=not DEBUG)
+SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', default=not DEBUG)
+CSRF_COOKIE_SECURE = env.bool('CSRF_COOKIE_SECURE', default=not DEBUG)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+
+from django.core.exceptions import ImproperlyConfigured
+if not DEBUG and SECRET_KEY == 'django-insecure-default-change-me-in-production-1234567890':
+    raise ImproperlyConfigured("SECRET_KEY must be changed in a production environment.")

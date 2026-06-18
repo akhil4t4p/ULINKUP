@@ -13,3 +13,8 @@ class AdvertisementSerializer(serializers.ModelSerializer):
             'end_date', 'clicks', 'views', 'status', 'created_at'
         )
         read_only_fields = ('id', 'clicks', 'views', 'created_at')
+
+    def validate_budget(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Ad budget must be greater than zero.")
+        return value

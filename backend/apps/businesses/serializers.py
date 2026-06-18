@@ -28,6 +28,11 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ('id', 'created_at', 'updated_at', 'portfolio_items', 'rating', 'verified', 'is_featured')
 
+    def validate_hourly_rate(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Hourly rate cannot be negative.")
+        return value
+
 class LeadSerializer(serializers.ModelSerializer):
     customer_name = serializers.SerializerMethodField()
     customer_email = serializers.SerializerMethodField()
