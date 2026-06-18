@@ -10,6 +10,6 @@ class AdvertisementSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'business', 'business_name', 'title', 'banner_image', 
             'target_category', 'category_name', 'budget', 'start_date', 
-            'end_date', 'clicks', 'status', 'created_at'
+            'end_date', 'clicks', 'views', 'status', 'created_at'
         )
-        read_only_fields = ('id', 'clicks', 'created_at')
+        read_only_fields = ('id', 'clicks', 'views', 'created_at')

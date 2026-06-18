@@ -46,7 +46,16 @@ export default function LandingPage() {
         // Fetch active ads
         const adsRes = await api.get('/api/ads/?status=ACTIVE');
         if (adsRes.status === 200) {
-          setAds(adsRes.data.results || adsRes.data);
+          const adsData = adsRes.data.results || adsRes.data;
+          setAds(adsData);
+          // Telemetry: increment impression views asynchronously
+          adsData.forEach(ad => {
+            if (ad.id) {
+              api.post(`/api/ads/${ad.id}/view_increment/`).catch(err => {
+                console.warn("Could not register view telemetry for ad:", ad.id, err);
+              });
+            }
+          });
         }
       } catch (err) {
         console.warn("Could not load real ads, using development stubs", err);
@@ -219,7 +228,17 @@ export default function LandingPage() {
                 <p className="text-muted mb-3 small">Offered by {ad.business_name || ad.provider} • Available hyperlocally.</p>
                 <div className="d-flex justify-content-between align-items-center">
                   <span className="text-dark fw-bold">Limited Time</span>
-                  <Link to="/search" className="neo-btn py-2 px-3 small text-decoration-none">
+                  <Link 
+                    to="/search" 
+                    onClick={() => {
+                      if (ad.id) {
+                        api.post(`/api/ads/${ad.id}/click_increment/`).catch(err => {
+                          console.warn("Could not register click telemetry for ad:", ad.id, err);
+                        });
+                      }
+                    }}
+                    className="neo-btn py-2 px-3 small text-decoration-none"
+                  >
                     Claim Deal
                   </Link>
                 </div>

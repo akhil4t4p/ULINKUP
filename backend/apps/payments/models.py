@@ -21,6 +21,7 @@ class Transaction(models.Model):
         ('SUBSCRIPTION', 'Subscription Purchase'),
         ('VERIFICATION', 'Verification Badge Purchase'),
         ('FEATURE', 'Featured Listing Purchase'),
+        ('ADVERTISEMENT', 'Ad Campaign Budget'),
     )
     STATUS_CHOICES = (
         ('PENDING', 'Pending'),

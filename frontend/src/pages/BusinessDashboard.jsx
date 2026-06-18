@@ -15,6 +15,21 @@ export default function BusinessDashboard() {
   const [wallet, setWallet] = useState({ balance: 0.00 });
   const [subscription, setSubscription] = useState(null);
   const [analytics, setAnalytics] = useState(null);
+  const [myAds, setMyAds] = useState([]);
+
+  // Campaign Form States
+  const [adForm, setAdForm] = useState({
+    title: '',
+    target_category: '',
+    budget: '',
+    start_date: '',
+    end_date: ''
+  });
+  const [adBannerFile, setAdBannerFile] = useState(null);
+  const [submittingAd, setSubmittingAd] = useState(false);
+  const [editingAdId, setEditingAdId] = useState(null);
+  const [editBudgetAmount, setEditBudgetAmount] = useState('');
+  const [updatingAdBudget, setUpdatingAdBudget] = useState(false);
 
   // Forms
   const [profileForm, setProfileForm] = useState({
@@ -110,6 +125,16 @@ export default function BusinessDashboard() {
       }
     } catch (err) {
       console.warn("Could not load analytics", err);
+    }
+
+    try {
+      // 7. Fetch Ad Campaigns
+      const adsRes = await api.get('/api/ads/?my=true');
+      if (adsRes.status === 200) {
+        setMyAds(adsRes.data.results || adsRes.data);
+      }
+    } catch (err) {
+      console.warn("Could not load ad campaigns", err);
     }
 
     setLoading(false);
@@ -240,6 +265,92 @@ export default function BusinessDashboard() {
     }
   };
 
+  const handleCreateAd = async (e) => {
+    e.preventDefault();
+    if (!adBannerFile) {
+      alert("Please select a banner image file.");
+      return;
+    }
+    setSubmittingAd(true);
+    try {
+      const formData = new FormData();
+      formData.append('title', adForm.title);
+      formData.append('target_category', adForm.target_category);
+      formData.append('budget', adForm.budget);
+      formData.append('start_date', adForm.start_date);
+      formData.append('end_date', adForm.end_date);
+      formData.append('banner_image', adBannerFile);
+
+      const res = await api.post('/api/ads/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (res.status === 201) {
+        alert("Ad campaign created successfully!");
+        setAdForm({
+          title: '',
+          target_category: '',
+          budget: '',
+          start_date: '',
+          end_date: ''
+        });
+        setAdBannerFile(null);
+        fetchDashboardData();
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to create ad campaign.");
+    } finally {
+      setSubmittingAd(false);
+    }
+  };
+
+  const handleToggleAdStatus = async (adId, currentStatus) => {
+    const newStatus = currentStatus === 'ACTIVE' ? 'PENDING' : 'ACTIVE';
+    try {
+      const res = await api.patch(`/api/ads/${adId}/`, { status: newStatus });
+      if (res.status === 200) {
+        setMyAds(prev => prev.map(ad => ad.id === adId ? res.data : ad));
+        alert(`Ad campaign status updated to ${newStatus}.`);
+        const analRes = await api.get('/api/businesses/analytics/');
+        if (analRes.status === 200) {
+          setAnalytics(analRes.data);
+        }
+      }
+    } catch (err) {
+      alert("Failed to toggle ad status.");
+    }
+  };
+
+  const handleDeleteAd = async (adId) => {
+    if (!window.confirm("Are you sure you want to delete this ad campaign? The remaining budget will be refunded to your wallet.")) return;
+    try {
+      const res = await api.delete(`/api/ads/${adId}/`);
+      if (res.status === 204 || res.status === 200) {
+        alert("Ad campaign deleted and remaining budget refunded!");
+        fetchDashboardData();
+      }
+    } catch (err) {
+      alert("Failed to delete ad campaign.");
+    }
+  };
+
+  const handleEditAdBudget = async (e) => {
+    e.preventDefault();
+    setUpdatingAdBudget(true);
+    try {
+      const res = await api.patch(`/api/ads/${editingAdId}/`, { budget: editBudgetAmount });
+      if (res.status === 200) {
+        alert("Ad budget updated successfully!");
+        setEditingAdId(null);
+        setEditBudgetAmount('');
+        fetchDashboardData();
+      }
+    } catch (err) {
+      alert(err.response?.data?.budget?.[0] || err.response?.data?.error || "Failed to update budget.");
+    } finally {
+      setUpdatingAdBudget(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container py-5 text-center">
@@ -325,6 +436,12 @@ export default function BusinessDashboard() {
           className={`neo-btn py-2 px-4 ${activeTab === 'subscription' ? 'active font-weight-bold border-dark' : ''}`}
         >
           <i className="bi bi-credit-card-2-front-fill me-2"></i> Subscription Plans
+        </button>
+        <button 
+          onClick={() => setActiveTab('campaigns')} 
+          className={`neo-btn py-2 px-4 ${activeTab === 'campaigns' ? 'active font-weight-bold border-dark' : ''}`}
+        >
+          <i className="bi bi-megaphone-fill me-2"></i> Ad Campaigns
         </button>
       </div>
 
@@ -754,6 +871,213 @@ export default function BusinessDashboard() {
               </NeomorphicCard>
             </div>
           </div>
+        </div>
+      )}
+
+      {activeTab === 'campaigns' && (
+        <div>
+          {/* Create Campaign Form */}
+          <NeomorphicCard className="p-5 mb-5" elevation="convex">
+            <h3 className="mb-4 fw-bold">Launch New Hyperlocal Ad Campaign</h3>
+            <form onSubmit={handleCreateAd}>
+              <div className="row g-4">
+                <div className="col-md-6">
+                  <label className="form-label fw-bold text-secondary">Campaign Title</label>
+                  <input 
+                    type="text" 
+                    className="form-control neo-input"
+                    value={adForm.title}
+                    onChange={(e) => setAdForm({ ...adForm, title: e.target.value })}
+                    placeholder="e.g. 20% Off Plumbing Services"
+                    required
+                  />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label fw-bold text-secondary">Banner Image</label>
+                  <input 
+                    type="file" 
+                    className="form-control neo-input"
+                    accept="image/*"
+                    onChange={(e) => setAdBannerFile(e.target.files[0])}
+                    required
+                  />
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label fw-bold text-secondary">Target Category</label>
+                  <select 
+                    className="form-control neo-input"
+                    value={adForm.target_category}
+                    onChange={(e) => setAdForm({ ...adForm, target_category: e.target.value })}
+                    required
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label fw-bold text-secondary">Budget (₹)</label>
+                  <input 
+                    type="number" 
+                    className="form-control neo-input"
+                    value={adForm.budget}
+                    onChange={(e) => setAdForm({ ...adForm, budget: e.target.value })}
+                    placeholder="e.g. 500"
+                    min="1"
+                    required
+                  />
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label fw-bold text-secondary">Start Date</label>
+                  <input 
+                    type="date" 
+                    className="form-control neo-input"
+                    value={adForm.start_date}
+                    onChange={(e) => setAdForm({ ...adForm, start_date: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label fw-bold text-secondary">End Date</label>
+                  <input 
+                    type="date" 
+                    className="form-control neo-input"
+                    value={adForm.end_date}
+                    onChange={(e) => setAdForm({ ...adForm, end_date: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+              <button type="submit" disabled={submittingAd} className="neo-btn-accent py-3 px-5 mt-4 text-white border-0">
+                {submittingAd ? 'Launching Campaign...' : 'Launch Campaign'}
+              </button>
+            </form>
+          </NeomorphicCard>
+
+          {/* Edit Budget Panel */}
+          {editingAdId && (
+            <NeomorphicCard className="p-4 mb-5 border-start border-4 border-warning" elevation="convex">
+              <h5 className="fw-bold mb-3"><i className="bi bi-pencil-fill text-warning"></i> Adjust Ad Campaign Budget</h5>
+              <form onSubmit={handleEditAdBudget} className="d-flex align-items-end gap-3 flex-wrap">
+                <div>
+                  <label className="form-label fw-bold text-secondary small">New Budget (₹)</label>
+                  <input 
+                    type="number" 
+                    className="form-control neo-input" 
+                    value={editBudgetAmount}
+                    onChange={(e) => setEditBudgetAmount(e.target.value)}
+                    required
+                    style={{ width: '200px' }}
+                  />
+                </div>
+                <div className="d-flex gap-2">
+                  <button type="submit" disabled={updatingAdBudget} className="neo-btn-accent px-4 py-2 text-white border-0">
+                    {updatingAdBudget ? 'Saving...' : 'Update Budget'}
+                  </button>
+                  <button type="button" onClick={() => { setEditingAdId(null); setEditBudgetAmount(''); }} className="neo-btn px-4 py-2">
+                    Cancel
+                  </button>
+                </div>
+                <div className="text-secondary small mt-1 w-100">
+                  Budget difference will be automatically charged or refunded to your wallet.
+                </div>
+              </form>
+            </NeomorphicCard>
+          )}
+
+          {/* Ad Campaigns List */}
+          <h3 className="mb-4"><i className="bi bi-megaphone-fill text-primary"></i> Your Ad Campaigns</h3>
+          {myAds.length > 0 ? (
+            <div className="row g-4">
+              {myAds.map(ad => {
+                const ctr = ad.views > 0 ? ((ad.clicks / ad.views) * 100).toFixed(2) : '0.00';
+                return (
+                  <div key={ad.id} className="col-md-6 col-lg-4">
+                    <NeomorphicCard elevation="convex" className="p-0 overflow-hidden h-100 d-flex flex-column justify-content-between">
+                      <div>
+                        {/* Banner Image */}
+                        <div className="bg-dark text-white d-flex align-items-center justify-content-center position-relative" style={{ height: '150px', overflow: 'hidden' }}>
+                          {ad.banner_image ? (
+                            <img src={ad.banner_image} alt={ad.title} className="w-100 h-100" style={{ objectFit: 'cover' }} />
+                          ) : (
+                            <i className="bi bi-megaphone fs-1"></i>
+                          )}
+                          <div className="position-absolute top-0 end-0 m-2">
+                            <span className={`badge ${ad.status === 'ACTIVE' ? 'bg-success' : 'bg-secondary'} rounded-pill px-3 py-1`}>
+                              {ad.status}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Details */}
+                        <div className="p-4">
+                          <h5 className="fw-bold mb-2">{ad.title}</h5>
+                          <div className="text-muted small mb-3">
+                            <i className="bi bi-tag-fill me-1 text-primary"></i> Category: {ad.category_name || 'General'}
+                          </div>
+                          
+                          <div className="border-top pt-3 text-secondary small">
+                            <div className="d-flex justify-content-between mb-1">
+                              <span>Impressions (Views):</span>
+                              <span className="fw-bold text-dark">{ad.views}</span>
+                            </div>
+                            <div className="d-flex justify-content-between mb-1">
+                              <span>Clicks:</span>
+                              <span className="fw-bold text-dark">{ad.clicks}</span>
+                            </div>
+                            <div className="d-flex justify-content-between mb-2">
+                              <span>CTR:</span>
+                              <span className="fw-bold text-primary">{ctr}%</span>
+                            </div>
+                            <div className="d-flex justify-content-between mb-1">
+                              <span>Campaign Budget:</span>
+                              <span className="fw-bold text-success">₹{ad.budget}</span>
+                            </div>
+                            <div className="d-flex justify-content-between small text-muted mt-2 border-top pt-2">
+                              <span>Start: {ad.start_date}</span>
+                              <span>End: {ad.end_date}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Campaign Actions */}
+                      <div className="p-4 border-top bg-light d-flex gap-2">
+                        <button 
+                          onClick={() => handleToggleAdStatus(ad.id, ad.status)}
+                          className="neo-btn flex-grow-1 py-2 text-center small"
+                        >
+                          {ad.status === 'ACTIVE' ? 'Pause' : 'Resume'}
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setEditingAdId(ad.id);
+                            setEditBudgetAmount(ad.budget);
+                          }}
+                          className="neo-btn py-2 px-3 small"
+                          title="Edit Budget"
+                        >
+                          <i className="bi bi-pencil-fill text-warning"></i>
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteAd(ad.id)}
+                          className="neo-btn py-2 px-3 small"
+                          title="Delete Ad"
+                        >
+                          <i className="bi bi-trash-fill text-danger"></i>
+                        </button>
+                      </div>
+                    </NeomorphicCard>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <NeomorphicCard elevation="inset" className="p-5 text-center text-muted">
+              You haven't launched any hyperlocal advertisement campaigns yet. Use the form above to get started!
+            </NeomorphicCard>
+          )}
         </div>
       )}
     </div>
