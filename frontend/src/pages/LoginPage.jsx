@@ -9,6 +9,7 @@ export default function LoginPage() {
   const [role, setRole] = useState('customer'); // default UI choice
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showMockGoogleModal, setShowMockGoogleModal] = useState(false);
 
   const { devLogin, googleLogin } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -35,22 +36,41 @@ export default function LoginPage() {
     setLoading(false);
   };
 
-  const handleGoogleOAuth = async () => {
+  const handleGoogleCredentialResponse = async (response) => {
     setError('');
     setLoading(true);
-    
-    // Simulate getting a Google token and call GoogleLogin backend integration
-    // We send a mock token which will succeed if we bypass local verification,
-    // or we can fall back to devLogin for Google OAuth simulation
-    const mockGoogleToken = 'mock_google_id_token_123456';
-    const result = await devLogin(`google.${role}@ulinkup.com`, role.toUpperCase());
-    
+    const result = await googleLogin(response.credential, role.toUpperCase());
     if (result.success) {
-      navigate('/select-account');
+      navigate(result.user.role === 'CUSTOMER' ? '/customer/dashboard' : '/business/dashboard');
     } else {
-      setError("Google OAuth integration failed. Please use Developer Login.");
+      setError(result.error || "Google Authentication failed on backend.");
     }
     setLoading(false);
+  };
+
+  useEffect(() => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (clientId && window.google) {
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleGoogleCredentialResponse
+      });
+      window.google.accounts.id.renderButton(
+        document.getElementById("googleBtnContainer"),
+        { theme: "outline", size: "large", width: "100%" }
+      );
+    }
+  }, [role]);
+
+  const handleGoogleOAuth = async () => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (clientId) {
+      if (window.google) {
+        window.google.accounts.id.prompt();
+      }
+    } else {
+      setShowMockGoogleModal(true);
+    }
   };
 
   return (
@@ -137,19 +157,77 @@ export default function LoginPage() {
             <span className="position-absolute top-50 start-50 translate-middle bg-body px-3 text-muted small">OR CONTINUE WITH</span>
           </div>
           
-          <button 
-            type="button" 
-            onClick={handleGoogleOAuth}
-            className="w-100 neo-btn py-3 d-flex align-items-center justify-content-center gap-2"
-            disabled={loading}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" className="bi bi-google text-primary" viewBox="0 0 16 16">
-              <path d="M15.545 6.558a9.4 9.4 0 0 1 .139 1.626c0 2.434-.87 4.492-2.384 5.885h.002C11.978 15.292 10.158 16 8 16A8 8 0 1 1 8 0c2.198 0 4.086.786 5.544 2.146l-2.26 2.26C10.22 3.393 9.244 3 8 3c-2.79 0-5.051 2.26-5.051 5s2.261 5 5.051 5c3.07 0 5.056-2.094 5.056-5.19 0-.315-.028-.621-.082-.9H8V6.57h7.545z"/>
-            </svg>
-            Google Account
-          </button>
+          {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
+            <div id="googleBtnContainer" className="w-100"></div>
+          ) : (
+            <button 
+              type="button" 
+              onClick={handleGoogleOAuth}
+              className="w-100 neo-btn py-3 d-flex align-items-center justify-content-center gap-2"
+              disabled={loading}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" className="bi bi-google text-primary" viewBox="0 0 16 16">
+                <path d="M15.545 6.558a9.4 9.4 0 0 1 .139 1.626c0 2.434-.87 4.492-2.384 5.885h.002C11.978 15.292 10.158 16 8 16A8 8 0 1 1 8 0c2.198 0 4.086.786 5.544 2.146l-2.26 2.26C10.22 3.393 9.244 3 8 3c-2.79 0-5.051 2.26-5.051 5s2.261 5 5.051 5c3.07 0 5.056-2.094 5.056-5.19 0-.315-.028-.621-.082-.9H8V6.57h7.545z"/>
+              </svg>
+              Google Account
+            </button>
+          )}
         </NeomorphicCard>
       </div>
+
+      {/* Neomorphic Mock Google Selector Modal */}
+      {showMockGoogleModal && (
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" style={{ backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 1050 }}>
+          <div className="w-100 px-3" style={{ maxWidth: '450px' }}>
+            <NeomorphicCard className="p-4" elevation="convex">
+              <div className="d-flex justify-content-between align-items-center mb-4">
+                <h5 className="fw-bold mb-0">Sign in with Google</h5>
+                <button type="button" className="btn-close" onClick={() => setShowMockGoogleModal(false)} aria-label="Close"></button>
+              </div>
+              
+              <p className="text-secondary small mb-3">Choose a simulated Google Account to continue to <strong>ULINKUP</strong>:</p>
+              
+              <div className="d-flex flex-column gap-3 mb-4">
+                {[
+                  { name: 'Alex Smith', email: 'alex.smith@gmail.com', role: 'CUSTOMER', avatar: 'AS' },
+                  { name: 'Sarah Jones', email: 'sarah.jones@gmail.com', role: 'CUSTOMER', avatar: 'SJ' },
+                  { name: 'John Doe (Plumber)', email: 'john.doe@gmail.com', role: 'BUSINESS', avatar: 'JD' },
+                  { name: 'Jane Doe (Tutor)', email: 'jane.doe@gmail.com', role: 'BUSINESS', avatar: 'JD' }
+                ].map(acct => (
+                  <button 
+                    key={acct.email}
+                    type="button"
+                    onClick={async () => {
+                      setShowMockGoogleModal(false);
+                      setLoading(true);
+                      const result = await devLogin(acct.email, acct.role);
+                      if (result.success) {
+                        navigate(acct.role === 'CUSTOMER' ? '/customer/dashboard' : '/business/dashboard');
+                      } else {
+                        setError("Google mock login failed.");
+                      }
+                      setLoading(false);
+                    }}
+                    className="neo-btn p-3 d-flex align-items-center gap-3 text-start w-100"
+                  >
+                    <div className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style={{ width: '40px', height: '40px' }}>
+                      {acct.avatar}
+                    </div>
+                    <div>
+                      <div className="fw-bold text-dark">{acct.name}</div>
+                      <div className="text-muted small">{acct.email} • {acct.role}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              
+              <div className="text-muted small text-center">
+                To use real Google Sign-In, configure <code>VITE_GOOGLE_CLIENT_ID</code> in your frontend <code>.env</code> file.
+              </div>
+            </NeomorphicCard>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

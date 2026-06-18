@@ -14,7 +14,7 @@ const CATEGORIES = [
 
 export default function LandingPage() {
   const [query, setQuery] = useState('');
-  const [location, setLocation] = useState('');
+  const [location, setLocation] = useState(localStorage.getItem('detected_location') || '');
   const [providers, setProviders] = useState([]);
   const [ads, setAds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -68,6 +68,57 @@ export default function LandingPage() {
     };
 
     fetchLandingData();
+
+    // Autodetect Location when page opens
+    const autodetectLocation = async () => {
+      const savedLoc = localStorage.getItem('detected_location');
+      if (savedLoc) return;
+
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.city) {
+            const locName = `${data.city}, ${data.region_code || data.country_name}`;
+            setLocation(locName);
+            localStorage.setItem('detected_location', locName);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("IP geolocation failed, trying HTML5 Geolocation", err);
+      }
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords;
+            try {
+              const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+              if (res.ok) {
+                const data = await res.json();
+                const city = data.address.city || data.address.town || data.address.village || data.address.suburb;
+                if (city) {
+                  const locName = `${city}, ${data.address.state || ''}`;
+                  setLocation(locName);
+                  localStorage.setItem('detected_location', locName);
+                }
+              }
+            } catch (err) {
+              console.warn("Reverse geocoding failed", err);
+            }
+          },
+          (err) => {
+            console.warn("Browser geolocation denied", err);
+            setLocation('Mumbai');
+          }
+        );
+      } else {
+        setLocation('Mumbai');
+      }
+    };
+
+    autodetectLocation();
   }, []);
 
   const handleSearch = (e) => {

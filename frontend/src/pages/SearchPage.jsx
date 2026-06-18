@@ -8,7 +8,7 @@ export default function SearchPage() {
   
   // State from URL
   const [query, setQuery] = useState(searchParams.get('q') || '');
-  const [location, setLocation] = useState(searchParams.get('loc') || '');
+  const [location, setLocation] = useState(searchParams.get('loc') || localStorage.getItem('detected_location') || '');
   const [category, setCategory] = useState(searchParams.get('category') || '');
   
   // Custom Filter State
@@ -25,7 +25,7 @@ export default function SearchPage() {
   // Sync state if searchParams change
   useEffect(() => {
     setQuery(searchParams.get('q') || '');
-    setLocation(searchParams.get('loc') || '');
+    setLocation(searchParams.get('loc') || localStorage.getItem('detected_location') || '');
     setCategory(searchParams.get('category') || '');
   }, [searchParams]);
 
