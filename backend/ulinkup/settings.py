@@ -9,7 +9,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Initialize environment variables
 env = environ.Env(
     DEBUG=(bool, False),
-    ALLOWED_HOSTS=(list, ['127.0.0.1', 'localhost', 'ulinkup-backend.onrender.com']),
+    ALLOWED_HOSTS=(list, [
+        '127.0.0.1',
+        'localhost',
+        'ulinkup-backend.onrender.com',
+        'ulinkup-backend-p6qh.onrender.com',
+    ]),
     CORS_ALLOWED_ORIGINS=(list, []),
     CORS_ALLOW_ALL_ORIGINS=(bool, False),
 )
@@ -315,9 +320,10 @@ from django.core.exceptions import ImproperlyConfigured
 if not DEBUG and SECRET_KEY in ('django-insecure-default-change-me-in-production-1234567890', ''):
     raise ImproperlyConfigured("SECRET_KEY must be changed in a production environment.")
 
-# Ensure ALLOWED_HOSTS always includes the Render internal hostname
-if not DEBUG and 'ulinkup-backend.onrender.com' not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append('ulinkup-backend.onrender.com')
+# Ensure ALLOWED_HOSTS always includes both Render hostnames
+for _host in ['ulinkup-backend.onrender.com', 'ulinkup-backend-p6qh.onrender.com']:
+    if not DEBUG and _host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_host)
 
 # Sentry Error Tracking Configuration
 SENTRY_DSN = env('SENTRY_DSN', default='')
