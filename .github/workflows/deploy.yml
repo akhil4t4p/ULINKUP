@@ -73,7 +73,7 @@ jobs:
       - name: 🏗️ Build Production Bundle
         run: |
           cd frontend
-          VITE_API_URL=https://ulinkup-backend.onrender.com \
+          VITE_API_URL=https://ulinkup-backend-p6qh.onrender.com \
           VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }} \
           npm run build
 
@@ -127,7 +127,7 @@ jobs:
             vercel --token=${{ secrets.VERCEL_TOKEN }} \
               --prod \
               --yes \
-              --build-env VITE_API_URL=https://ulinkup-backend.onrender.com \
+              --build-env VITE_API_URL=https://ulinkup-backend-p6qh.onrender.com \
               --build-env VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           else
             echo "⚠️ VERCEL_TOKEN not set — Vercel will auto-deploy from GitHub integration"
@@ -145,7 +145,7 @@ jobs:
 
       - name: 🔍 Check Backend Health
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://ulinkup-backend.onrender.com/api/config/ --max-time 30 || echo "000")
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://ulinkup-backend-p6qh.onrender.com/api/config/ --max-time 30 || echo "000")
           echo "Backend status: $STATUS"
           if [[ "$STATUS" == "200" || "$STATUS" == "201" ]]; then
             echo "✅ Backend is healthy"
