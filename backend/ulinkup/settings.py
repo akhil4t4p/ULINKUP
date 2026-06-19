@@ -38,15 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    
-    # Cloudinary Storage MUST be before staticfiles
-    'cloudinary_storage',
-    
     'django.contrib.staticfiles',
     'django.contrib.sites',  # Required for allauth
-    
-    # Cloudinary main helper app
-    'cloudinary',
     
     # Custom Apps
     'apps.users.apps.UsersConfig',
@@ -288,9 +281,13 @@ CLOUDINARY_STORAGE = {
     'API_SECRET': env('CLOUDINARY_API_SECRET', default=''),
 }
 
-# Only override default media storage if cloud credentials are fully configured
-# Django 6.0+: use STORAGES dict instead of deprecated DEFAULT_FILE_STORAGE
+# Only enable Cloudinary if credentials are fully configured
 if CLOUDINARY_STORAGE['CLOUD_NAME'] and CLOUDINARY_STORAGE['API_KEY']:
+    INSTALLED_APPS.insert(
+        INSTALLED_APPS.index('django.contrib.staticfiles'),
+        'cloudinary_storage'
+    )
+    INSTALLED_APPS.append('cloudinary')
     STORAGES['default'] = {
         'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage',
     }
