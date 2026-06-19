@@ -237,6 +237,15 @@ ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'
 CORS_ALLOW_ALL_ORIGINS = env('CORS_ALLOW_ALL_ORIGINS', default=False)
 CORS_ALLOWED_ORIGINS = env('CORS_ALLOWED_ORIGINS')
 
+if not CORS_ALLOWED_ORIGINS:
+    CORS_ALLOWED_ORIGINS = [
+        "https://ulinkup.vercel.app",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+
+CORS_ALLOW_CREDENTIALS = True
+
 # If CORS_ALLOW_ALL_ORIGINS is enabled during development
 if DEBUG and not CORS_ALLOWED_ORIGINS:
     CORS_ALLOW_ALL_ORIGINS = True
