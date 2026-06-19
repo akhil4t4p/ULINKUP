@@ -1,0 +1,49 @@
+services:
+  - type: web
+    name: ulinkup-backend
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: >
+      python manage.py migrate --no-input &&
+      python manage.py collectstatic --no-input --clear &&
+      daphne -b 0.0.0.0 -p $PORT ulinkup.asgi:application
+    healthCheckPath: /api/config/
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_HOSTS
+        value: "ulinkup-backend.onrender.com"
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://ulinkup.vercel.app"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ulinkup-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ulinkup-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: ulinkup-redis
+          property: connectionString
+      - key: SECURE_SSL_REDIRECT
+        value: "False"
+
+databases:
+  - name: ulinkup-db
+    plan: free
+    region: oregon
+
+  - name: ulinkup-redis
+    plan: free
+    region: oregon

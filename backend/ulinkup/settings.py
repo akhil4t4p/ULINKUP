@@ -242,6 +242,8 @@ if not CORS_ALLOWED_ORIGINS:
         "https://ulinkup.vercel.app",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
     ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -296,8 +298,12 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 
 from django.core.exceptions import ImproperlyConfigured
-if not DEBUG and SECRET_KEY == 'django-insecure-default-change-me-in-production-1234567890':
+if not DEBUG and SECRET_KEY in ('django-insecure-default-change-me-in-production-1234567890', ''):
     raise ImproperlyConfigured("SECRET_KEY must be changed in a production environment.")
+
+# Ensure ALLOWED_HOSTS always includes the Render internal hostname
+if not DEBUG and 'ulinkup-backend.onrender.com' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('ulinkup-backend.onrender.com')
 
 # Sentry Error Tracking Configuration
 SENTRY_DSN = env('SENTRY_DSN', default='')
