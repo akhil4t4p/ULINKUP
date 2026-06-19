@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from .models import Advertisement
 from .serializers import AdvertisementSerializer
 from apps.businesses.models import BusinessProfile
-from apps.payments.models import Transaction, Wallet
+from apps.payments.models import Transaction
 
 class AdvertisementViewSet(viewsets.ModelViewSet):
     queryset = Advertisement.objects.all()
@@ -40,25 +40,8 @@ class AdvertisementViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         
         budget = serializer.validated_data.get('budget', 0)
-        try:
-            wallet = Wallet.objects.get(user=request.user)
-        except Wallet.DoesNotExist:
-            return Response(
-                {"error": "No wallet found for this user. Please contact support."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-            
-        if wallet.balance < budget:
-            return Response(
-                {"error": f"Insufficient wallet balance. Ad budget is ₹{budget}, but wallet balance is ₹{wallet.balance}."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-            
-        # Deduct wallet balance
-        wallet.balance -= budget
-        wallet.save()
         
-        # Create Transaction
+        # Create Transaction directly (no wallet deduction)
         Transaction.objects.create(
             user=request.user,
             amount=budget,
@@ -76,15 +59,8 @@ class AdvertisementViewSet(viewsets.ModelViewSet):
         
         if new_budget is not None and new_budget != instance.budget:
             diff = new_budget - instance.budget
-            wallet = Wallet.objects.get(user=self.request.user)
             
             if diff > 0:
-                if wallet.balance < diff:
-                    raise serializers.ValidationError(
-                        {"budget": f"Insufficient wallet balance. Need additional ₹{diff} to increase budget."}
-                    )
-                wallet.balance -= diff
-                wallet.save()
                 Transaction.objects.create(
                     user=self.request.user,
                     amount=diff,
@@ -93,8 +69,6 @@ class AdvertisementViewSet(viewsets.ModelViewSet):
                 )
             elif diff < 0:
                 refund = abs(diff)
-                wallet.balance += refund
-                wallet.save()
                 Transaction.objects.create(
                     user=self.request.user,
                     amount=-refund,
@@ -105,19 +79,12 @@ class AdvertisementViewSet(viewsets.ModelViewSet):
         serializer.save()
 
     def perform_destroy(self, instance):
-        # Refund remaining budget
-        try:
-            wallet = Wallet.objects.get(user=self.request.user)
-            wallet.balance += instance.budget
-            wallet.save()
-            Transaction.objects.create(
-                user=self.request.user,
-                amount=-instance.budget,
-                transaction_type='ADVERTISEMENT',
-                status='SUCCESS'
-            )
-        except Wallet.DoesNotExist:
-            pass
+        Transaction.objects.create(
+            user=self.request.user,
+            amount=-instance.budget,
+            transaction_type='ADVERTISEMENT',
+            status='SUCCESS'
+        )
         instance.delete()
 
     @action(detail=True, methods=['post'], url_path='click_increment', permission_classes=[permissions.AllowAny])

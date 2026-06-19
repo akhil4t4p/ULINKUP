@@ -1,7 +1,8 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import NeomorphicCard from '../components/NeomorphicCard';
+import api from '../utils/api';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showMockGoogleModal, setShowMockGoogleModal] = useState(false);
+  const [googleClientId, setGoogleClientId] = useState('');
 
   const { devLogin, googleLogin } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -36,23 +38,36 @@ export default function LoginPage() {
     setLoading(false);
   };
 
-  const handleGoogleCredentialResponse = async (response) => {
+  const handleGoogleCredentialResponse = useCallback(async (response) => {
     setError('');
     setLoading(true);
     const result = await googleLogin(response.credential, role.toUpperCase());
     if (result.success) {
       navigate(result.user.role === 'CUSTOMER' ? '/customer/dashboard' : '/business/dashboard');
+    } else if (result.code === 'GOOGLE_NOT_CONFIGURED') {
+      // Backend not configured — fall back to mock selector
+      setLoading(false);
+      setShowMockGoogleModal(true);
     } else {
-      setError(result.error || "Google Authentication failed on backend.");
+      setError(result.error || 'Google Authentication failed on backend.');
     }
     setLoading(false);
-  };
+  }, [googleLogin, navigate, role]);
 
   useEffect(() => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (clientId && window.google) {
+    // Fetch dynamic config from backend
+    api.get('/api/config/').then(res => {
+      const clientId = res.data.VITE_GOOGLE_CLIENT_ID;
+      if (clientId) {
+        setGoogleClientId(clientId);
+      }
+    }).catch(err => console.error("Failed to load config", err));
+  }, []);
+
+  useEffect(() => {
+    if (googleClientId && window.google) {
       window.google.accounts.id.initialize({
-        client_id: clientId,
+        client_id: googleClientId,
         callback: handleGoogleCredentialResponse
       });
       window.google.accounts.id.renderButton(
@@ -60,11 +75,10 @@ export default function LoginPage() {
         { theme: "outline", size: "large", width: "100%" }
       );
     }
-  }, [role]);
+  }, [role, handleGoogleCredentialResponse, googleClientId]);
 
   const handleGoogleOAuth = async () => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (clientId) {
+    if (googleClientId) {
       if (window.google) {
         window.google.accounts.id.prompt();
       }
@@ -157,7 +171,7 @@ export default function LoginPage() {
             <span className="position-absolute top-50 start-50 translate-middle bg-body px-3 text-muted small">OR CONTINUE WITH</span>
           </div>
           
-          {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
+          {googleClientId ? (
             <div id="googleBtnContainer" className="w-100"></div>
           ) : (
             <button 
@@ -221,8 +235,8 @@ export default function LoginPage() {
                 ))}
               </div>
               
-              <div className="text-muted small text-center">
-                To use real Google Sign-In, configure <code>VITE_GOOGLE_CLIENT_ID</code> in your frontend <code>.env</code> file.
+              <div className="text-muted small text-center mt-3">
+                To use real Google Sign-In, add a <strong>GOOGLE_CLIENT_ID</strong> in the Super Admin <strong>API Keys</strong> panel.
               </div>
             </NeomorphicCard>
           </div>

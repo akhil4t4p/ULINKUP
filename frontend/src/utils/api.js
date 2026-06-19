@@ -9,12 +9,16 @@ const api = axios.create({
   },
 });
 
-// Request Interceptor: Attach access token to every outgoing request
+// Request Interceptor: Attach access token and handle FormData content type
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    // Let axios auto-set Content-Type with boundary for FormData uploads
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
     }
     return config;
   },

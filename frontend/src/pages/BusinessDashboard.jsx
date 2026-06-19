@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import NeomorphicCard from '../components/NeomorphicCard';
+import UserProfileHeader from '../components/UserProfileHeader';
 import { AuthContext } from '../context/AuthContext';
 import api from '../utils/api';
 
@@ -12,10 +13,9 @@ export default function BusinessDashboard() {
   const [profile, setProfile] = useState(null);
   const [categories, setCategories] = useState([]);
   const [leads, setLeads] = useState([]);
-  const [wallet, setWallet] = useState({ balance: 0.00 });
-  const [subscription, setSubscription] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [myAds, setMyAds] = useState([]);
+  const [subscription, setSubscription] = useState(null);
 
   // Campaign Form States
   const [adForm, setAdForm] = useState({
@@ -33,6 +33,7 @@ export default function BusinessDashboard() {
 
   // Forms
   const [profileForm, setProfileForm] = useState({
+    username: '',
     category: '',
     experience: '',
     hourly_rate: '',
@@ -50,6 +51,10 @@ export default function BusinessDashboard() {
   const [portfolioImageFile, setPortfolioImageFile] = useState(null);
   const [submittingPortfolio, setSubmittingPortfolio] = useState(false);
   const [submittingProfile, setSubmittingProfile] = useState(false);
+  const [customCategory, setCustomCategory] = useState('');
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [customAdCategory, setCustomAdCategory] = useState('');
+  const [isCustomAdCategory, setIsCustomAdCategory] = useState(false);
 
   const fetchDashboardData = async () => {
     try {
@@ -57,7 +62,10 @@ export default function BusinessDashboard() {
       const profRes = await api.get('/api/businesses/me/');
       if (profRes.status === 200) {
         setProfile(profRes.data);
+        // Derive subscription from profile data
+        setSubscription(profRes.data.subscription_plan ? { plan_type: profRes.data.subscription_plan } : null);
         setProfileForm({
+          username: profRes.data.username || '',
           category: profRes.data.category || '',
           experience: profRes.data.experience || 0,
           hourly_rate: profRes.data.hourly_rate || '0.00',
@@ -81,41 +89,7 @@ export default function BusinessDashboard() {
       console.warn("Could not load categories", err);
     }
 
-    try {
-      // 3. Fetch Wallet
-      const walletRes = await api.get('/api/wallets/');
-      if (walletRes.status === 200) {
-        const wallets = walletRes.data.results || walletRes.data;
-        if (wallets.length > 0) {
-          setWallet(wallets[0]);
-        }
-      }
-    } catch (err) {
-      console.warn("Could not load wallet", err);
-    }
-
-    try {
-      // 4. Fetch Leads
-      const leadsRes = await api.get('/api/leads/');
-      if (leadsRes.status === 200) {
-        setLeads(leadsRes.data.results || leadsRes.data);
-      }
-    } catch (err) {
-      console.warn("Could not load leads", err);
-    }
-
-    try {
-      // 5. Fetch Subscription
-      const subRes = await api.get('/api/subscriptions/');
-      if (subRes.status === 200) {
-        const subs = subRes.data.results || subRes.data;
-        // Find active subscription
-        const activeSub = subs.find(s => s.is_active);
-        setSubscription(activeSub || null);
-      }
-    } catch (err) {
-      console.warn("Could not load subscription", err);
-    }
+    // Removed wallet and subscription standalone endpoints (data comes from profile now)
 
     try {
       // 6. Fetch Analytics
@@ -161,30 +135,19 @@ export default function BusinessDashboard() {
     }
   };
 
-  const handleQuickRecharge = async () => {
-    try {
-      const res = await api.post('/api/wallets/recharge/', { amount: 100 });
-      if (res.status === 200) {
-        setWallet(res.data);
-        alert("Wallet recharged with ₹100 successfully!");
-      }
-    } catch (err) {
-      alert("Quick recharge failed.");
-    }
-  };
+  // Actions
 
   const unlockLead = async (leadId) => {
     try {
       const res = await api.post(`/api/leads/${leadId}/unlock/`);
       if (res.status === 200 && res.data.success) {
-        // Update wallet balance
-        setWallet(prev => ({ ...prev, balance: parseFloat(res.data.new_balance) }));
         // Update lead in list
         setLeads(prev => prev.map(lead => lead.id === leadId ? res.data.lead : lead));
+        fetchDashboardData();
         alert("Lead contact info unlocked!");
       }
     } catch (err) {
-      alert(err.response?.data?.error || "Lead unlock failed. Please check wallet balance.");
+      alert(err.response?.data?.error || "Lead unlock failed. Please check your plan limits.");
     }
   };
 
@@ -193,7 +156,28 @@ export default function BusinessDashboard() {
     setSubmittingProfile(true);
     try {
       const payload = { ...profileForm };
-      if (!payload.category) delete payload.category; // Avoid null error if not set
+
+      // If custom category was typed, create it first
+      if (isCustomCategory && customCategory.trim()) {
+        try {
+          const catRes = await api.post('/api/categories/', { name: customCategory.toUpperCase(), slug: customCategory.toLowerCase().replace(/\s+/g, '-').replace(/&/g, 'and') });
+          if (catRes.status === 201) {
+            payload.category = catRes.data.id;
+            // Refresh categories list
+            const updatedCats = await api.get('/api/categories/');
+            setCategories(updatedCats.data.results || updatedCats.data);
+          }
+        } catch (catErr) {
+          // Category might already exist, try to find it
+          const existingCats = await api.get('/api/categories/');
+          const catList = existingCats.data.results || existingCats.data;
+          setCategories(catList);
+          const found = catList.find(c => c.name === customCategory.toUpperCase());
+          if (found) payload.category = found.id;
+        }
+      }
+
+      if (!payload.category) delete payload.category;
 
       // Update basic fields
       let res = await api.patch('/api/businesses/me/', payload);
@@ -202,9 +186,7 @@ export default function BusinessDashboard() {
       if (profilePhotoFile) {
         const formData = new FormData();
         formData.append('profile_photo', profilePhotoFile);
-        res = await api.patch('/api/businesses/me/', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        res = await api.patch('/api/businesses/me/', formData);
       }
 
       if (res.status === 200) {
@@ -257,7 +239,7 @@ export default function BusinessDashboard() {
     try {
       const res = await api.post('/api/subscriptions/', { plan_type: planType });
       if (res.status === 201) {
-        setSubscription(res.data);
+        fetchDashboardData();
         alert(`Successfully upgraded to ${planType} Plan!`);
       }
     } catch (err) {
@@ -321,11 +303,11 @@ export default function BusinessDashboard() {
   };
 
   const handleDeleteAd = async (adId) => {
-    if (!window.confirm("Are you sure you want to delete this ad campaign? The remaining budget will be refunded to your wallet.")) return;
+    if (!window.confirm("Are you sure you want to delete this ad campaign?")) return;
     try {
       const res = await api.delete(`/api/ads/${adId}/`);
       if (res.status === 204 || res.status === 200) {
-        alert("Ad campaign deleted and remaining budget refunded!");
+        alert("Ad campaign deleted successfully!");
         fetchDashboardData();
       }
     } catch (err) {
@@ -370,46 +352,13 @@ export default function BusinessDashboard() {
 
   return (
     <div className="container py-5">
-      {/* Top Profile Summary Header Card */}
-      <NeomorphicCard className="p-5 mb-4" elevation="convex">
-        <div className="row align-items-center g-4">
-          <div className="col-md-2 text-center text-md-start">
-            <div className="neo-btn rounded-circle p-2 d-inline-flex bg-white justify-content-center align-items-center" style={{ width: '100px', height: '100px', overflow: 'hidden' }}>
-              {profile?.profile_photo ? (
-                <img src={profile.profile_photo} alt="" className="w-100 h-100 rounded-circle" style={{ objectFit: 'cover' }} />
-              ) : (
-                <i className="bi bi-person-workspace fs-1 text-primary"></i>
-              )}
-            </div>
-          </div>
-          <div className="col-md-7 text-center text-md-start">
-            <h2 className="fw-black mb-1">{profile?.username || 'Professional Provider'}</h2>
-            <p className="text-secondary mb-3">
-              <span className="neo-badge me-2">{profile?.category_name || 'No Category'}</span>
-              <span><i className="bi bi-star-fill text-warning me-1"></i> {profile?.rating || '5.0'} Rating</span>
-            </p>
-            <div className="d-flex flex-wrap gap-3 justify-content-center justify-content-md-start align-items-center">
-              <label className="neo-switch">
-                <input 
-                  type="checkbox" 
-                  checked={profile?.is_available || false} 
-                  onChange={handleToggleOnline} 
-                />
-                <span className="neo-switch-slider"></span>
-                <span className="fw-bold small text-secondary">
-                  {profile?.is_available ? 'ONLINE & ACTIVE' : 'OFFLINE'}
-                </span>
-              </label>
-              <span className="text-muted small"><i className="bi bi-geo-alt-fill text-danger me-1"></i> {profile?.location || 'Local'}</span>
-            </div>
-          </div>
-          <div className="col-md-3 text-center text-md-end">
-            <div className="neo-badge text-primary px-4 py-2 fw-bold">
-              Subscription: {subscription ? subscription.plan_type : 'Free Starter'}
-            </div>
-          </div>
-        </div>
-      </NeomorphicCard>
+      <UserProfileHeader 
+        profile={profile} 
+        subscription={subscription} 
+        handleToggleOnline={handleToggleOnline} 
+      />
+      
+      {/* Removed old profile summary header card to avoid duplication */}
 
       {/* Tabs Control Row */}
       <div className="d-flex flex-wrap gap-2 mb-4">
@@ -511,21 +460,24 @@ export default function BusinessDashboard() {
               </NeomorphicCard>
             </div>
 
-            {/* Wallet & Quick Actions Card */}
+            {/* Subscription & Quick Actions Card */}
             <div className="col-md-4">
               <NeomorphicCard className="p-4 h-100 d-flex flex-column justify-content-between text-center">
                 <div>
-                  <h5 className="text-muted fw-bold mb-3 uppercase small">Wallet & Credits</h5>
+                  <h5 className="text-muted fw-bold mb-3 uppercase small">Current Plan</h5>
                   <div className="my-3">
-                    <h1 className="fw-black text-primary mb-1">₹{parseFloat(wallet?.balance || 0).toFixed(2)}</h1>
-                    <p className="text-secondary small mb-0">Cost per unlock: ₹15</p>
+                    <h1 className="fw-black text-primary mb-1">{profile?.subscription_plan || 'FREE'}</h1>
+                    <p className="text-secondary small mb-0">Connections Used: {profile?.lead_connections_count || 0}</p>
+                    {profile?.subscription_plan === 'FREE' && (
+                       <p className="text-danger small fw-bold">Limit: 10 Connections</p>
+                    )}
                   </div>
                 </div>
                 <button 
-                  onClick={handleQuickRecharge} 
+                  onClick={() => setActiveTab('subscription')} 
                   className="neo-btn py-3 w-100 mt-2 small"
                 >
-                  Quick Recharge (₹100)
+                  Manage Subscription
                 </button>
               </NeomorphicCard>
             </div>
@@ -602,7 +554,7 @@ export default function BusinessDashboard() {
                         onClick={() => unlockLead(lead.id)} 
                         className="w-100 neo-btn-accent py-3 d-flex align-items-center justify-content-center gap-2 text-white border-0"
                       >
-                        <i className="bi bi-unlock-fill"></i> Unlock Details (₹15)
+                        <i className="bi bi-unlock-fill"></i> Unlock Details (7 ULU Coins)
                       </button>
                     ) : (
                       <div className="neo-inset p-3 bg-white" style={{ borderRadius: '12px' }}>
@@ -631,24 +583,34 @@ export default function BusinessDashboard() {
                 <label className="form-label fw-bold text-secondary">Trade Category</label>
                 <select 
                   className="form-control neo-input"
-                  value={profileForm.category}
-                  onChange={(e) => setProfileForm({ ...profileForm, category: e.target.value })}
+                  value={isCustomCategory ? '__OTHERS__' : profileForm.category}
+                  onChange={(e) => {
+                    if (e.target.value === '__OTHERS__') {
+                      setIsCustomCategory(true);
+                      setCustomCategory('');
+                      setProfileForm({ ...profileForm, category: '' });
+                    } else {
+                      setIsCustomCategory(false);
+                      setProfileForm({ ...profileForm, category: e.target.value });
+                    }
+                  }}
                 >
                   <option value="">Select Category</option>
                   {categories.map(cat => (
                     <option key={cat.id} value={cat.id}>{cat.name}</option>
                   ))}
+                  <option value="__OTHERS__">OTHERS (Type Manually)</option>
                 </select>
-              </div>
-
-              <div className="col-md-6">
-                <label className="form-label fw-bold text-secondary">Profile Image</label>
-                <input 
-                  type="file" 
-                  className="form-control neo-input"
-                  accept="image/*"
-                  onChange={(e) => setProfilePhotoFile(e.target.files[0])}
-                />
+                {isCustomCategory && (
+                  <input
+                    type="text"
+                    className="form-control neo-input mt-2"
+                    placeholder="Type your category (auto UPPERCASE)"
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value.toUpperCase())}
+                    autoFocus
+                  />
+                )}
               </div>
 
               <div className="col-md-6">
@@ -906,15 +868,35 @@ export default function BusinessDashboard() {
                   <label className="form-label fw-bold text-secondary">Target Category</label>
                   <select 
                     className="form-control neo-input"
-                    value={adForm.target_category}
-                    onChange={(e) => setAdForm({ ...adForm, target_category: e.target.value })}
+                    value={isCustomAdCategory ? '__OTHERS__' : adForm.target_category}
+                    onChange={(e) => {
+                      if (e.target.value === '__OTHERS__') {
+                        setIsCustomAdCategory(true);
+                        setCustomAdCategory('');
+                        setAdForm({ ...adForm, target_category: '' });
+                      } else {
+                        setIsCustomAdCategory(false);
+                        setAdForm({ ...adForm, target_category: e.target.value });
+                      }
+                    }}
                     required
                   >
                     <option value="">Select Category</option>
                     {categories.map(cat => (
                       <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
+                    <option value="__OTHERS__">OTHERS (Type Manually)</option>
                   </select>
+                  {isCustomAdCategory && (
+                    <input
+                      type="text"
+                      className="form-control neo-input mt-2"
+                      placeholder="Type target category (auto UPPERCASE)"
+                      value={customAdCategory}
+                      onChange={(e) => setCustomAdCategory(e.target.value.toUpperCase())}
+                      autoFocus
+                    />
+                  )}
                 </div>
                 <div className="col-md-4">
                   <label className="form-label fw-bold text-secondary">Budget (₹)</label>
@@ -980,7 +962,7 @@ export default function BusinessDashboard() {
                   </button>
                 </div>
                 <div className="text-secondary small mt-1 w-100">
-                  Budget difference will be automatically charged or refunded to your wallet.
+                  Budget changes will be logged in your transactions.
                 </div>
               </form>
             </NeomorphicCard>

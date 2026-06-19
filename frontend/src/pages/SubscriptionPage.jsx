@@ -10,7 +10,7 @@ const TIERS = [
     price: '₹0',
     period: 'forever',
     desc: 'Perfect for beginners starting out local service networking.',
-    features: ['Basic Local Directory Listing', 'Receive job inquiries', 'Pay ₹15 per lead unlock', 'No verification badge', 'Standard search listing priority'],
+    features: ['Basic Local Directory Listing', 'Receive job inquiries', 'Pay 7 ULU Coins per lead unlock', 'No verification badge', 'Standard search listing priority'],
     accent: false,
     cta: 'Current Plan'
   },
@@ -20,7 +20,7 @@ const TIERS = [
     price: '₹499',
     period: 'monthly',
     desc: 'Great value for active freelancers and growing businesses.',
-    features: ['Standard Directory Listing', '10 Free Lead Unlocks per month', 'Pay ₹10 per additional lead', 'Silver Verification Badge', 'Medium search listing priority'],
+    features: ['Standard Directory Listing', '10 Free Lead Unlocks per month', 'Pay 7 ULU Coins per additional lead', 'Silver Verification Badge', 'Medium search listing priority'],
     accent: true,
     cta: 'Upgrade to Silver'
   },
@@ -70,7 +70,7 @@ export default function SubscriptionPage() {
 
     try {
       // 1. Create Razorpay order
-      const res = await api.post('/api/wallets/create_razorpay_order/', {
+      const res = await api.post('/api/coin-wallets/create_razorpay_order/', {
         amount: price,
         type: 'SUBSCRIPTION',
         plan_type: tierKey
@@ -79,68 +79,46 @@ export default function SubscriptionPage() {
       if (res.status === 200) {
         const orderData = res.data;
 
-        // 2. Open payment flow
-        if (orderData.mock) {
-          const confirmPayment = window.confirm(`[MOCK PAYMENTS ENGINE] Simulate payment of ₹${price} for ${tierKey} Subscription?`);
-          if (confirmPayment) {
-            const verifyRes = await api.post('/api/wallets/verify_razorpay_payment/', {
-              razorpay_order_id: orderData.order_id,
-              type: 'SUBSCRIPTION',
-              plan_type: tierKey
-            });
-            if (verifyRes.status === 200 && verifyRes.data.success) {
-              // Fetch updated subscription list
-              const subRes = await api.get('/api/subscriptions/');
-              if (subRes.status === 200) {
-                const list = subRes.data.results || subRes.data;
-                const active = list.find(s => s.is_active);
-                setActiveSub(active || null);
-              }
-              alert(`Successfully upgraded to the ${tierKey} plan (Mock Mode)!`);
-            }
-          }
-        } else {
-          // Open real Razorpay checkout
-          const options = {
-            key: orderData.key_id,
-            amount: parseFloat(orderData.amount) * 100, // in paise
-            currency: 'INR',
-            name: 'ULINKUP Hyperlocal',
-            description: `${tierKey} Subscription Upgrade`,
-            order_id: orderData.order_id,
-            handler: async function (response) {
-              try {
-                const verifyRes = await api.post('/api/wallets/verify_razorpay_payment/', {
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                  type: 'SUBSCRIPTION',
-                  plan_type: tierKey
-                });
-                if (verifyRes.status === 200 && verifyRes.data.success) {
-                  // Fetch updated subscription list
-                  const subRes = await api.get('/api/subscriptions/');
-                  if (subRes.status === 200) {
-                    const list = subRes.data.results || subRes.data;
-                    const active = list.find(s => s.is_active);
-                    setActiveSub(active || null);
-                  }
-                  alert(`Successfully upgraded to the ${tierKey} plan!`);
+        // Open real Razorpay checkout
+        const options = {
+          key: orderData.key_id,
+          amount: parseFloat(orderData.amount) * 100, // in paise
+          currency: 'INR',
+          name: 'ULINKUP Hyperlocal',
+          description: `${tierKey} Subscription Upgrade`,
+          ...(orderData.real_order ? { order_id: orderData.order_id } : {}),
+          handler: async function (response) {
+            try {
+              const verifyRes = await api.post('/api/coin-wallets/verify_razorpay_payment/', {
+                razorpay_order_id: response.razorpay_order_id || orderData.order_id,
+                razorpay_payment_id: response.razorpay_payment_id || 'pay_demo123',
+                razorpay_signature: response.razorpay_signature || 'mock_signature',
+                type: 'SUBSCRIPTION',
+                plan_type: tierKey
+              });
+              if (verifyRes.status === 200 && verifyRes.data.success) {
+                // Fetch updated subscription list
+                const subRes = await api.get('/api/subscriptions/');
+                if (subRes.status === 200) {
+                  const list = subRes.data.results || subRes.data;
+                  const active = list.find(s => s.is_active);
+                  setActiveSub(active || null);
                 }
-              } catch (verErr) {
-                alert("Payment verification failed.");
+                alert(`Successfully upgraded to the ${tierKey} plan!`);
               }
-            },
-            prefill: {
-              email: 'user@ulinkup.com'
-            },
-            theme: {
-              color: '#000000'
+            } catch (verErr) {
+              alert("Payment verification failed.");
             }
-          };
-          const rzp = new window.Razorpay(options);
-          rzp.open();
-        }
+          },
+          prefill: {
+            email: 'user@ulinkup.com'
+          },
+          theme: {
+            color: '#000000'
+          }
+        };
+        const rzp = new window.Razorpay(options);
+        rzp.open();
       }
     } catch (err) {
       alert("Subscription upgrade order creation failed.");
@@ -161,10 +139,11 @@ export default function SubscriptionPage() {
           const isCurrent = (tier.key === 'FREE' && !activeSub) || (activeSub && activeSub.plan_type === tier.key);
           return (
             <div key={idx} className="col-md-6 col-lg-4">
-              <NeomorphicCard 
-                elevation={tier.accent ? 'concave' : 'convex'} 
-                className={`p-5 h-100 d-flex flex-column justify-content-between ${tier.accent ? 'border border-dark border-3' : ''}`}
-              >
+              <div onClick={() => !isCurrent && !loading && handleSubscribe(tier.key)}>
+                <NeomorphicCard 
+                  elevation={tier.accent ? 'concave' : 'convex'} 
+                  className={`plan-card p-5 h-100 d-flex flex-column justify-content-between ${tier.accent ? 'border border-dark border-3' : ''}`}
+                >
                 <div>
                   <div className="d-flex justify-content-between align-items-center mb-3">
                     <h4 className="fw-bold mb-0">{tier.name}</h4>
@@ -198,6 +177,7 @@ export default function SubscriptionPage() {
                   {isCurrent ? 'Current Plan' : tier.cta}
                 </button>
               </NeomorphicCard>
+              </div>
             </div>
           );
         })}

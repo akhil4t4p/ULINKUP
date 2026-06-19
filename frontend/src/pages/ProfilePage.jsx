@@ -94,13 +94,13 @@ export default function ProfilePage() {
     }
 
     try {
-      const res = await api.post('/api/wallets/unlock_contact/', { business_id: id });
+      const res = await api.post('/api/coin-wallets/unlock_contact/', { business_id: id });
       if (res.status === 200 && res.data.success) {
         setContactUnlocked(true);
         setUserCredits(parseFloat(res.data.new_balance));
       }
     } catch (err) {
-      alert(err.response?.data?.error || "Deduction failed. Ensure you have ₹15 credits.");
+      alert(err.response?.data?.error || "Deduction failed. Ensure you have 7 ULU Coins.");
     }
   };
 
@@ -150,77 +150,84 @@ export default function ProfilePage() {
 
   return (
     <div className="container py-5">
-      {/* Profile Header Block */}
-      <NeomorphicCard className="p-5 mb-5" elevation="convex">
-        <div className="row align-items-center g-4">
-          <div className="col-md-2 text-center text-md-start">
-            <div className="neo-btn rounded-circle p-4 d-inline-flex bg-white" style={{ width: '100px', height: '100px', pointerEvents: 'none' }}>
-              {provider.profile_photo ? (
-                <img src={provider.profile_photo} alt="" className="rounded-circle w-100 h-100" style={{ objectFit: 'cover' }} />
+      {/* Instagram-Style Profile Header */}
+      <NeomorphicCard className="mb-5 overflow-hidden p-0 position-relative" elevation="convex">
+        {/* Banner Section */}
+        <div className="bg-light position-relative" style={{ height: '250px', width: '100%' }}>
+          {provider.banner ? (
+            <img src={provider.banner} alt="Banner" className="w-100 h-100" style={{ objectFit: 'cover' }} />
+          ) : (
+            <div className="w-100 h-100 bg-secondary opacity-25"></div>
+          )}
+        </div>
+        
+        <div className="px-4 pb-4 position-relative" style={{ marginTop: '-60px' }}>
+          <div className="d-flex flex-column flex-md-row align-items-center align-items-md-end justify-content-between mb-4">
+            
+            {/* Avatar Section */}
+            <div className="text-center text-md-start mb-3 mb-md-0 position-relative z-1">
+              <div className="rounded-circle p-1 bg-white shadow-lg d-inline-block" style={{ width: '140px', height: '140px' }}>
+                {provider.avatar || provider.profile_photo ? (
+                  <img src={provider.avatar || provider.profile_photo} alt="Avatar" className="rounded-circle w-100 h-100" style={{ objectFit: 'cover' }} />
+                ) : (
+                  <div className="rounded-circle w-100 h-100 bg-light d-flex align-items-center justify-content-center">
+                    <i className="bi bi-person fs-1 text-secondary"></i>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Unlock Contacts Action Box */}
+            <div className="text-center text-md-end mt-4 mt-md-0">
+              {contactUnlocked ? (
+                <div className="neo-inset p-3 bg-white text-start d-inline-block" style={{ borderRadius: '15px', minWidth: '250px' }}>
+                  <div className="small text-muted mb-2"><i className="bi bi-telephone-fill me-2 text-success"></i> {provider.phone || '+91 98765 43210'}</div>
+                  <div className="small text-muted"><i className="bi bi-envelope-fill me-2 text-primary"></i> {provider.email || 'contact@provider.com'}</div>
+                </div>
               ) : (
-                <i className="bi bi-person-workspace fs-1 text-primary"></i>
+                <div className="d-flex flex-column align-items-center align-items-md-end gap-2">
+                  <button className="neo-btn-accent px-4 py-2" onClick={handleUnlockContact}>
+                    <i className="bi bi-unlock-fill me-2"></i> Get Contact (7 ULU Coins)
+                  </button>
+                  <span className="text-muted small fw-semibold">Wallet: ₹{userCredits}</span>
+                </div>
               )}
             </div>
           </div>
-          
-          <div className="col-md-7 text-center text-md-start">
-            <h1 className="fw-black mb-1 d-flex align-items-center justify-content-center justify-content-md-start gap-2">
-              {provider.name || provider.username}
-              {provider.verified && <i className="bi bi-patch-check-fill text-primary" title="Verified Business"></i>}
-            </h1>
-            <p className="text-secondary lead mb-2">
-              <span className="neo-badge me-2">{provider.category_name}</span>
-              <span><i className="bi bi-star-fill text-warning me-1"></i> {provider.rating || '5.0'} Rating</span>
-              <span className="mx-2">•</span>
-              <span>{provider.experience || 0} Yrs Exp</span>
+
+          {/* User Info Section */}
+          <div className="text-center text-md-start">
+            <h2 className="fw-black mb-0 d-flex align-items-center justify-content-center justify-content-md-start gap-2">
+              {provider.nickname || provider.name || provider.username || "Anonymous User"}
+              {provider.verified && <i className="bi bi-patch-check-fill text-primary fs-4" title="Verified"></i>}
+            </h2>
+            <p className="text-secondary fw-semibold mb-3">
+              @{provider.username || `user_${provider.id}`}
             </p>
-            <p className="text-muted mb-0"><i className="bi bi-geo-alt-fill text-danger me-1"></i> {provider.location || 'Local'}</p>
-          </div>
-          
-          {/* Unlock Contacts Action Box */}
-          <div className="col-md-3 text-center text-md-end">
-            {contactUnlocked ? (
-              <div className="neo-inset p-3 bg-white text-start" style={{ borderRadius: '15px' }}>
-                <div className="small text-muted mb-2"><i className="bi bi-telephone-fill me-2 text-success"></i> {provider.phone || '+91 98765 43210'}</div>
-                <div className="small text-muted"><i className="bi bi-envelope-fill me-2 text-primary"></i> {provider.email || 'apex.plumbing@gmail.com'}</div>
-              </div>
-            ) : (
-              <div className="d-flex flex-column align-items-center align-items-md-end gap-2">
-                <button 
-                  onClick={handleUnlockContact} 
-                  className="neo-btn-accent w-100 py-3"
-                >
-                  <i className="bi bi-unlock-fill me-2"></i> Get Contact (₹15)
-                </button>
-                <span className="text-muted small">Your Wallet Bal: ₹{userCredits}</span>
-              </div>
-            )}
-          </div>
-        </div>
+            
+            <p className="text-dark mb-3">
+              <span className="neo-badge me-2 bg-light">{provider.category_name}</span>
+              <span className="me-3"><i className="bi bi-star-fill text-warning me-1"></i> <strong>{provider.rating || '5.0'}</strong> Rating</span>
+              <span className="me-3 text-muted">•</span>
+              <span><strong>{provider.experience || 0}</strong> Yrs Exp</span>
+            </p>
 
-        <hr className="my-4 opacity-25" />
-        
-        <div>
-          <h4 className="fw-bold mb-3">About the Provider</h4>
-          <p className="text-secondary" style={{ lineHeight: '1.6' }}>
-            {provider.about || "No description provided yet by the professional."}
-          </p>
-        </div>
+            <div className="d-flex flex-column flex-md-row gap-3 text-muted small">
+              <div><i className="bi bi-geo-alt-fill text-danger me-1"></i> {provider.location || 'Local Area'}</div>
+              {provider.work_timings && (
+                <div><i className="bi bi-clock-fill text-primary me-1"></i> {provider.work_timings}</div>
+              )}
+            </div>
 
-        {/* Work Timings & Service Areas */}
-        <div className="row g-3 mt-3 border-top pt-3">
-          {provider.work_timings && (
-            <div className="col-md-6 small text-muted">
-              <i className="bi bi-clock-fill text-primary me-2"></i>
-              <strong>Timings:</strong> {provider.work_timings}
+            <hr className="my-4 opacity-10" />
+            
+            <div>
+              <h5 className="fw-bold mb-2">About</h5>
+              <p className="text-secondary" style={{ lineHeight: '1.6', maxWidth: '800px' }}>
+                {provider.about || "No description provided yet."}
+              </p>
             </div>
-          )}
-          {provider.service_areas && (
-            <div className="col-md-6 small text-muted">
-              <i className="bi bi-geo-fill text-success me-2"></i>
-              <strong>Areas Serviced:</strong> {provider.service_areas}
-            </div>
-          )}
+          </div>
         </div>
       </NeomorphicCard>
 

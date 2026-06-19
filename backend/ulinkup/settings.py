@@ -27,6 +27,7 @@ ALLOWED_HOSTS = env('ALLOWED_HOSTS')
 
 # Application definition
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -50,6 +51,10 @@ INSTALLED_APPS = [
     'apps.payments.apps.PaymentsConfig',
     'apps.ads.apps.AdsConfig',
     'apps.subscriptions.apps.SubscriptionsConfig',
+    'apps.community.apps.CommunityConfig',
+    
+    # Websockets
+    'channels',
     
     # Third Party Apps
     'rest_framework',
@@ -102,10 +107,36 @@ TEMPLATES = [
 WSGI_APPLICATION = 'ulinkup.wsgi.application'
 ASGI_APPLICATION = 'ulinkup.asgi.application'
 
+# Channels Config
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
+
 # Database Setup
 DATABASES = {
     'default': env.db('DATABASE_URL', default=f'sqlite:///{os.path.join(BASE_DIR, "db.sqlite3")}')
 }
+
+# Redis Caching Configuration
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": env('REDIS_URL', default="redis://127.0.0.1:6379/1"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
+
+# Celery Configuration
+CELERY_BROKER_URL = env('CELERY_BROKER_URL', default=env('REDIS_URL', default='redis://127.0.0.1:6379/1'))
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
 
 # Custom User Model Configuration
 AUTH_USER_MODEL = 'users.User'
@@ -155,8 +186,21 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_PARSER_CLASSES': (
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+    ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/min',
+        'user': '1000/min'
+    }
 }
 
 # Simple JWT configuration
@@ -183,10 +227,9 @@ REST_AUTH = {
     'JWT_AUTH_SAMESITE': 'Lax',
 }
 
-# Allauth configuration settings
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
+# Allauth configuration settings (updated for allauth v0.63+)
+ACCOUNT_LOGIN_METHODS = {'email'}               # was: ACCOUNT_AUTHENTICATION_METHOD
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']  # was: ACCOUNT_EMAIL_REQUIRED + ACCOUNT_USERNAME_REQUIRED
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'
 
@@ -213,6 +256,10 @@ if CLOUDINARY_STORAGE['CLOUD_NAME'] and CLOUDINARY_STORAGE['API_KEY']:
 RAZORPAY_KEY_ID = env('RAZORPAY_KEY_ID', default='')
 RAZORPAY_KEY_SECRET = env('RAZORPAY_KEY_SECRET', default='')
 
+# Google OAuth Configuration
+# Set GOOGLE_CLIENT_ID in .env to enable real Google Sign-In
+GOOGLE_CLIENT_ID = env('GOOGLE_CLIENT_ID', default='')
+
 # Security Enforcements & Secure Headers (OWASP Protection)
 SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=not DEBUG)
 SECURE_HSTS_SECONDS = env.int('SECURE_HSTS_SECONDS', default=31536000 if not DEBUG else 0)
@@ -229,3 +276,22 @@ X_FRAME_OPTIONS = 'DENY'
 from django.core.exceptions import ImproperlyConfigured
 if not DEBUG and SECRET_KEY == 'django-insecure-default-change-me-in-production-1234567890':
     raise ImproperlyConfigured("SECRET_KEY must be changed in a production environment.")
+
+# Sentry Error Tracking Configuration
+SENTRY_DSN = env('SENTRY_DSN', default='')
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    from sentry_sdk.integrations.redis import RedisIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(),
+            CeleryIntegration(),
+            RedisIntegration(),
+        ],
+        traces_sample_rate=1.0,
+        send_default_pii=True
+    )

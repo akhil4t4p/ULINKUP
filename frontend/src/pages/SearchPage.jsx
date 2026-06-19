@@ -16,6 +16,7 @@ export default function SearchPage() {
   const [minExp, setMinExp] = useState(0);
   const [maxRate, setMaxRate] = useState(1500);
   const [isAvailableOnly, setIsAvailableOnly] = useState(false);
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
 
   // Loaded DB data
   const [categories, setCategories] = useState([]);
@@ -154,15 +155,33 @@ export default function SearchPage() {
               <label className="form-label fw-bold text-secondary">Category</label>
               <select 
                 className="form-select neo-input" 
-                style={{ appearance: 'none', backgroundPosition: 'right 16px center', backgroundImage: 'url("data:image/svg+xml;utf8,<svg fill=\'black\' height=\'24\' viewBox=\'0 0 24 24\' width=\'24\' xmlns=\'http://www.w3.org/2000/svg\'><path d=\'M7 10l5 5 5-5z\'/></svg>")' }}
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                value={isCustomCategory ? '__OTHERS__' : category}
+                onChange={(e) => {
+                  if (e.target.value === '__OTHERS__') {
+                    setIsCustomCategory(true);
+                    setCategory('');
+                  } else {
+                    setIsCustomCategory(false);
+                    setCategory(e.target.value);
+                  }
+                }}
               >
                 <option value="">All Categories</option>
                 {categories.map(cat => (
-                  <option key={cat.slug} value={cat.name}>{cat.name}</option>
+                  <option key={cat.id || cat.slug} value={cat.name}>{cat.name}</option>
                 ))}
+                <option value="__OTHERS__">OTHERS (Type Manually)</option>
               </select>
+              {isCustomCategory && (
+                <input
+                  type="text"
+                  className="form-control neo-input mt-2"
+                  placeholder="Type category name (auto UPPERCASE)"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value.toUpperCase())}
+                  autoFocus
+                />
+              )}
             </div>
 
             {/* Rating Filter Slider */}
@@ -247,10 +266,14 @@ export default function SearchPage() {
             <div className="row g-4">
               {providers.map(p => (
                 <div key={p.id} className="col-md-6">
-                  <NeomorphicCard className="p-4 h-100 d-flex flex-column justify-content-between">
+                  <NeomorphicCard 
+                    className={`p-4 h-100 d-flex flex-column justify-content-between ${p.is_restricted ? 'opacity-50 grayscale' : ''}`}
+                  >
                     <div>
                       <div className="d-flex justify-content-between align-items-start mb-2">
-                        <span className="neo-badge text-primary">{p.category_name}</span>
+                        <span className={`neo-badge ${p.is_restricted ? 'bg-secondary text-white' : 'text-primary'}`}>
+                          {p.category_name}
+                        </span>
                         <div className="text-warning fw-bold small">
                           <i className="bi bi-star-fill"></i> {p.rating || 5.0}
                         </div>
@@ -259,6 +282,7 @@ export default function SearchPage() {
                       <h4 className="fw-bold mb-1 d-flex align-items-center gap-2">
                         {p.name || p.username}
                         {p.verified && <i className="bi bi-patch-check-fill text-primary" title="Verified Provider"></i>}
+                        {p.is_restricted && <span className="badge bg-danger ms-2" style={{fontSize: '0.6rem'}}>INACTIVE</span>}
                       </h4>
                       <p className="text-muted small mb-3">
                         <i className="bi bi-geo-alt-fill me-1"></i> {p.location || 'Local'}
@@ -274,11 +298,22 @@ export default function SearchPage() {
                           <span className="fw-bold text-dark">₹{p.hourly_rate || '0'}/hr</span>
                         </div>
                       </div>
+                      {p.is_restricted && (
+                        <div className="text-danger small fw-bold text-center mb-3">
+                          Maximum lead connection utilized
+                        </div>
+                      )}
                     </div>
 
-                    <Link to={`/profile/${p.id}`} className="w-100 neo-btn-accent text-decoration-none py-2 text-center text-white">
-                      View Work Portfolio
-                    </Link>
+                    {p.is_restricted ? (
+                      <button className="w-100 neo-btn py-2 text-center text-muted" disabled>
+                        Profile Locked
+                      </button>
+                    ) : (
+                      <Link to={`/profile/${p.id}`} className="w-100 neo-btn-accent text-decoration-none py-2 text-center text-white">
+                        View Work Portfolio
+                      </Link>
+                    )}
                   </NeomorphicCard>
                 </div>
               ))}

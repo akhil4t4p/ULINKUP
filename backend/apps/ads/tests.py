@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
 from rest_framework import status
 from decimal import Decimal
-from apps.payments.models import Wallet, Transaction
+from apps.payments.models import Transaction
 from apps.businesses.models import BusinessProfile, Category
 from apps.ads.models import Advertisement
 
@@ -21,7 +21,6 @@ class AdvertisementTests(APITestCase):
             location='Test Location'
         )
         self.category = Category.objects.create(name='Tutor', slug='tutor')
-        self.wallet = Wallet.objects.create(user=self.user, balance=Decimal('200.00'))
         self.client.force_authenticate(user=self.user)
 
     def test_create_ad_success(self):
@@ -48,25 +47,9 @@ class AdvertisementTests(APITestCase):
 
         response = self.client.post(url, data, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.wallet.refresh_from_db()
-        self.assertEqual(self.wallet.balance, Decimal('50.00')) # 200 - 150
         self.assertTrue(Transaction.objects.filter(user=self.user, transaction_type='ADVERTISEMENT', amount=Decimal('150.00')).exists())
 
-    def test_create_ad_insufficient_funds(self):
-        url = '/api/ads/'
-        from django.core.files.uploadedfile import SimpleUploadedFile
-        gif = b'mock_gif_data'
-        banner_file = SimpleUploadedFile('banner.gif', gif, content_type='image/gif')
-        data = {
-            'title': 'Test Ad Campaign',
-            'target_category': self.category.id,
-            'budget': '250.00', # More than wallet balance
-            'start_date': '2026-06-19',
-            'end_date': '2026-06-25',
-            'banner_image': banner_file
-        }
-        response = self.client.post(url, data, format='multipart')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    # Removed test_create_ad_insufficient_funds as Wallet is removed
 
     def test_create_ad_negative_budget(self):
         url = '/api/ads/'
@@ -122,10 +105,8 @@ class AdvertisementTests(APITestCase):
             end_date='2026-06-25',
             banner_image=banner_file
         )
-        # Deleting the ad should refund the budget (100) back to the wallet
+        # Deleting the ad should record a negative transaction
         delete_url = f'/api/ads/{ad.id}/'
         response = self.client.delete(delete_url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.wallet.refresh_from_db()
-        # Initial wallet balance (200) + refunded budget (100) = 300
-        self.assertEqual(self.wallet.balance, Decimal('300.00'))
+        self.assertTrue(Transaction.objects.filter(user=self.user, transaction_type='ADVERTISEMENT', amount=Decimal('-100.00')).exists())

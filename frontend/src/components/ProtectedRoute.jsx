@@ -32,22 +32,10 @@ export default function ProtectedRoute({ children, allowedRoles = [] }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // If user role is not permitted
+  // If user role is not permitted — redirect to their correct dashboard
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role.toUpperCase())) {
-    return (
-      <div className="container py-5 d-flex justify-content-center align-items-center" style={{ minHeight: '60vh' }}>
-        <NeomorphicCard className="p-5 text-center" style={{ maxWidth: '500px' }}>
-          <i className="bi bi-shield-lock-fill text-danger display-3 mb-3 d-block"></i>
-          <h3 className="fw-bold mb-2">Access Denied</h3>
-          <p className="text-secondary mb-4">
-            Your account type ({user.role}) is not authorized to view this portal.
-          </p>
-          <div className="d-flex gap-2 justify-content-center">
-            <Navigate to="/" replace />
-          </div>
-        </NeomorphicCard>
-      </div>
-    );
+    const fallback = user.role === 'BUSINESS' ? '/business/dashboard' : '/customer/dashboard';
+    return <Navigate to={fallback} replace />;
   }
 
   return children;

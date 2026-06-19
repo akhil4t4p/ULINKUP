@@ -9,6 +9,13 @@ class Category(models.Model):
     class Meta:
         verbose_name_plural = 'Categories'
 
+    def save(self, *args, **kwargs):
+        # Always store category names in UPPERCASE
+        self.name = self.name.upper()
+        if not self.slug:
+            self.slug = self.name.lower().replace(' ', '-').replace('&', 'and')
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name
 
@@ -18,6 +25,14 @@ class BusinessProfile(models.Model):
         on_delete=models.CASCADE, 
         related_name='business_profile'
     )
+    
+    PLAN_CHOICES = (
+        ('FREE', 'Free'),
+        ('SILVER', 'Silver'),
+        ('GOLD', 'Gold'),
+    )
+    plan_tier = models.CharField(max_length=15, choices=PLAN_CHOICES, default='FREE')
+    
     category = models.ForeignKey(
         Category, 
         on_delete=models.SET_NULL, 

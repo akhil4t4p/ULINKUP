@@ -54,26 +54,42 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Google OAuth Login View endpoint
-  const googleLogin = async (accessToken, role = 'CUSTOMER') => {
+  // Google OAuth Login — verifies Google id_token on the backend
+  const googleLogin = async (credential, role = 'CUSTOMER') => {
     try {
       setLoading(true);
-      // Send Google credential token to Django backend SocialLogin view
-      const res = await api.post('/api/auth/google/', { access_token: accessToken });
+      // Send Google credential (id_token JWT) + desired role to backend
+      const res = await api.post('/api/auth/google/', {
+        credential,   // Google GSI id_token
+        role,         // CUSTOMER or BUSINESS
+      });
+
       const { access_token, refresh_token, user: userData } = res.data;
 
-      // Ensure user role is updated/set
-      const updatedUser = { ...userData, role };
-      
+      // Ensure user role is set (backend may return default role)
+      const updatedUser = { ...userData, role: userData.role || role };
+
       localStorage.setItem('access_token', access_token);
       localStorage.setItem('refresh_token', refresh_token);
       localStorage.setItem('user', JSON.stringify(updatedUser));
-      
+
       setUser(updatedUser);
       return { success: true, user: updatedUser };
     } catch (err) {
-      console.error("Google authentication failed:", err);
-      return { success: false, error: "Google OAuth validation failed" };
+      console.error('Google authentication failed:', err);
+      const errData = err.response?.data;
+      // Provide helpful error based on backend response code
+      if (errData?.code === 'GOOGLE_NOT_CONFIGURED') {
+        return {
+          success: false,
+          error: 'Google Sign-In is not configured on this server yet. Use the mock login below, or ask the admin to set GOOGLE_CLIENT_ID.',
+          code: 'GOOGLE_NOT_CONFIGURED'
+        };
+      }
+      return {
+        success: false,
+        error: errData?.error || 'Google authentication failed. Please try again.',
+      };
     } finally {
       setLoading(false);
     }
@@ -95,6 +111,7 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
+    setUser,
     loading,
     isAuthenticated: !!user,
     devLogin,

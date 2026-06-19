@@ -7,10 +7,24 @@ from django.db.models.functions import Coalesce
 from .models import Category, BusinessProfile, BusinessPortfolio, Lead
 from .serializers import CategorySerializer, BusinessProfileSerializer, BusinessPortfolioSerializer, LeadSerializer
 
-class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Category.objects.all()
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all().order_by('name')
     serializer_class = CategorySerializer
-    permission_classes = [permissions.AllowAny]
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        name = serializer.validated_data.get('name', '').upper()
+        slug = name.lower().replace(' ', '-').replace('&', 'and')
+        # Check if category already exists (case-insensitive)
+        existing = Category.objects.filter(name__iexact=name).first()
+        if existing:
+            from rest_framework.response import Response
+            return existing
+        serializer.save(name=name, slug=slug)
 
 class BusinessProfileViewSet(viewsets.ModelViewSet):
     queryset = BusinessProfile.objects.all()
@@ -186,28 +200,33 @@ class LeadViewSet(viewsets.ModelViewSet):
         if not lead.is_locked:
             return Response({'error': 'Lead already unlocked'}, status=status.HTTP_400_BAD_REQUEST)
         
-        from apps.payments.models import Wallet, Transaction
-        from decimal import Decimal
+        profile = request.user.business_profile
+        from apps.subscriptions.models import Subscription
+        from django.utils import timezone
         
-        wallet, created = Wallet.objects.get_or_create(user=request.user)
-        if wallet.balance < Decimal('15.00'):
-            return Response(
-                {'error': 'Insufficient wallet balance. Cost is ₹15.'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        active_sub = Subscription.objects.filter(user=request.user, is_active=True, end_date__gt=timezone.now()).first()
+        plan_type = active_sub.plan_type if active_sub else 'FREE'
         
-        wallet.balance -= Decimal('15.00')
-        wallet.save()
+        if plan_type == 'FREE':
+            unlocked_count = Lead.objects.filter(business=profile, is_locked=False).count()
+            if unlocked_count >= 10:
+                from apps.payments.models import UluCoinWallet, CoinTransactionHistory
+                try:
+                    wallet = UluCoinWallet.objects.get(user=request.user)
+                    if wallet.coins < 7:
+                        return Response({'error': 'Insufficient ULU Coins. Need 7 Coins.'}, status=status.HTTP_403_FORBIDDEN)
+                    wallet.coins -= 7
+                    wallet.save()
+                    CoinTransactionHistory.objects.create(
+                        user=request.user,
+                        transaction_type='SPEND',
+                        coins_amount=7,
+                        description=f"Unlocked lead ID {lead.id}"
+                    )
+                except UluCoinWallet.DoesNotExist:
+                    return Response({'error': 'Wallet not found. Need 7 ULU Coins to unlock.'}, status=status.HTTP_403_FORBIDDEN)
         
         lead.is_locked = False
         lead.save()
         
-        Transaction.objects.create(
-            user=request.user,
-            amount=Decimal('15.00'),
-            transaction_type='LEAD_UNLOCK',
-            status='SUCCESS',
-            reference_id=f'LEAD_{lead.id}'
-        )
-        
-        return Response({'success': True, 'new_balance': wallet.balance, 'lead': LeadSerializer(lead).data})
+        return Response({'success': True, 'lead': LeadSerializer(lead).data})
