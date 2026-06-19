@@ -62,13 +62,19 @@ export default function LoginPage() {
   }, [googleLogin, navigate, role]);
 
   useEffect(() => {
-    // Fetch dynamic config from backend
+    // Use env var first (set at Vercel build time) — no backend call needed
+    const envClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (envClientId) {
+      setGoogleClientId(envClientId);
+      return;
+    }
+    // Fallback: fetch from backend config API
     api.get('/api/config/').then(res => {
       const clientId = res.data.VITE_GOOGLE_CLIENT_ID;
       if (clientId) {
         setGoogleClientId(clientId);
       }
-    }).catch(err => console.error("Failed to load config", err));
+    }).catch(err => console.warn("Failed to load config from backend", err));
   }, []);
 
   useEffect(() => {

@@ -17,6 +17,7 @@
   "installCommand": "npm ci",
   "framework": "vite",
   "env": {
-    "VITE_API_URL": "https://ulinkup-backend.onrender.com"
+    "VITE_API_URL": "https://ulinkup-backend.onrender.com",
+    "VITE_GOOGLE_CLIENT_ID": "127360792031-s8ofa6v4le03e7iqthqhg13ds5qaolq4.apps.googleusercontent.com"
   }
 }

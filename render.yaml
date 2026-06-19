@@ -9,6 +9,7 @@ services:
     startCommand: >
       python manage.py migrate --no-input &&
       python manage.py collectstatic --no-input --clear &&
+      python manage.py create_admin &&
       daphne -b 0.0.0.0 -p $PORT ulinkup.asgi:application
     healthCheckPath: /api/config/
     envVars:
@@ -38,6 +39,9 @@ services:
           property: connectionString
       - key: SECURE_SSL_REDIRECT
         value: "False"
+      # IMPORTANT: Set these in Render Dashboard manually:
+      # GOOGLE_CLIENT_ID = 127360792031-s8ofa6v4le03e7iqthqhg13ds5qaolq4.apps.googleusercontent.com
+      # GOOGLE_CLIENT_SECRET = (set in Render dashboard → Environment)
 
 databases:
   - name: ulinkup-db
