@@ -73,6 +73,7 @@ urlpatterns = [
     
     # SimpleJWT tokens (if direct JWT generation is needed)
     path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     # Community and Public Feed APIs
     path('api/community/', include('apps.community.urls')),
 ]

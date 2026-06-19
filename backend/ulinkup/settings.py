@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Initialize environment variables
 env = environ.Env(
     DEBUG=(bool, False),
-    ALLOWED_HOSTS=(list, ['127.0.0.1', 'localhost']),
+    ALLOWED_HOSTS=(list, ['127.0.0.1', 'localhost', 'ulinkup-backend.onrender.com']),
     CORS_ALLOWED_ORIGINS=(list, []),
     CORS_ALLOW_ALL_ORIGINS=(bool, False),
 )
@@ -245,6 +245,19 @@ if not CORS_ALLOWED_ORIGINS:
     ]
 
 CORS_ALLOW_CREDENTIALS = True
+CORS_URLS_REGEX = r'^/api/.*$'
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 # If CORS_ALLOW_ALL_ORIGINS is enabled during development
 if DEBUG and not CORS_ALLOWED_ORIGINS:

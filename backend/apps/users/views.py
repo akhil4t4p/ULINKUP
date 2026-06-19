@@ -181,8 +181,15 @@ def developer_mock_login(request):
     Body: { "email": "test@example.com", "role": "CUSTOMER" | "BUSINESS" }
 
     Creates or retrieves a user without any password/OAuth.
-    Only for local development testing — DO NOT expose in production.
+    Only for local development testing — DISABLED in production.
     """
+    # Block this endpoint in production
+    if not settings.DEBUG:
+        return Response(
+            {'error': 'Developer login is not available in production.'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
     email = request.data.get('email')
     role = request.data.get('role', 'CUSTOMER').upper()
 

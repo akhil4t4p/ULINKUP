@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [showMockGoogleModal, setShowMockGoogleModal] = useState(false);
   const [googleClientId, setGoogleClientId] = useState('');
 
-  const { devLogin, googleLogin } = useContext(AuthContext);
+  const { login, devLogin, googleLogin } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -26,10 +26,17 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    const result = await devLogin(email || 'developer@ulinkup.com', role.toUpperCase());
-    
+    // Try real JWT login first (works in production)
+    let result = await login(email, password);
+
+    // If real login fails (no account / wrong password), and we have an email,
+    // fall back to developer mock login (only works locally when DEBUG=True)
+    if (!result.success && result.error === 'Invalid email or password.') {
+      const mockResult = await devLogin(email || 'developer@ulinkup.com', role.toUpperCase());
+      if (mockResult.success) result = mockResult;
+    }
+
     if (result.success) {
-      // Direct user to target dashboard
       const targetPath = result.user.role === 'CUSTOMER' ? '/customer/dashboard' : '/business/dashboard';
       navigate(targetPath);
     } else {

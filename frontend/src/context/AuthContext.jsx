@@ -33,6 +33,35 @@ export function AuthProvider({ children }) {
     initializeAuth();
   }, []);
 
+  // Real email + password login using JWT
+  const login = async (email, password) => {
+    try {
+      setLoading(true);
+      const res = await api.post('/api/auth/token/', { username: email, password });
+      const { access, refresh } = res.data;
+
+      localStorage.setItem('access_token', access);
+      localStorage.setItem('refresh_token', refresh);
+
+      // Fetch user details after successful auth
+      const userRes = await api.get('/api/auth/user/');
+      const userData = userRes.data;
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+      return { success: true, user: userData };
+    } catch (err) {
+      const errData = err.response?.data;
+      const message =
+        errData?.detail ||
+        errData?.non_field_errors?.[0] ||
+        errData?.error ||
+        'Invalid email or password.';
+      return { success: false, error: message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Developer Mock Login (supports JWT generation and roles without OAuth setup)
   const devLogin = async (email, role) => {
     try {
@@ -114,6 +143,7 @@ export function AuthProvider({ children }) {
     setUser,
     loading,
     isAuthenticated: !!user,
+    login,
     devLogin,
     googleLogin,
     logout
