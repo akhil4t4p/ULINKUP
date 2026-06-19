@@ -117,10 +117,20 @@ DATABASES = {
     'default': env.db('DATABASE_URL', default=f'sqlite:///{os.path.join(BASE_DIR, "db.sqlite3")}')
 }
 
-# Redis Caching Configuration with Local Fallback
+# Redis Caching Configuration with Graceful Fallback
 REDIS_URL = env('REDIS_URL', default='')
 
+_redis_available = False
 if REDIS_URL:
+    try:
+        import redis as _redis_lib
+        _r = _redis_lib.from_url(REDIS_URL, socket_connect_timeout=2)
+        _r.ping()
+        _redis_available = True
+    except Exception:
+        _redis_available = False
+
+if _redis_available:
     CACHES = {
         "default": {
             "BACKEND": "django_redis.cache.RedisCache",
@@ -139,9 +149,15 @@ else:
         }
     }
 
-# Celery Configuration
-CELERY_BROKER_URL = env('CELERY_BROKER_URL', default=env('REDIS_URL', default='redis://127.0.0.1:6379/1'))
-CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+# Celery Configuration — use Redis if available, otherwise in-memory broker
+if _redis_available:
+    CELERY_BROKER_URL = env('CELERY_BROKER_URL', default=REDIS_URL)
+    CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+else:
+    CELERY_BROKER_URL = 'memory://'
+    CELERY_RESULT_BACKEND = 'cache+memory://'
+    CELERY_TASK_ALWAYS_EAGER = True  # Execute tasks synchronously without a broker
+    CELERY_TASK_EAGER_PROPAGATES = True
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
