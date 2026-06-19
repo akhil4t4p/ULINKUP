@@ -172,11 +172,22 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = []
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Django 6.0+ STORAGES configuration (replaces DEFAULT_FILE_STORAGE / STATICFILES_STORAGE)
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+    },
+}
 
 # REST Framework Configuration
 REST_FRAMEWORK = {
@@ -273,8 +284,11 @@ CLOUDINARY_STORAGE = {
 }
 
 # Only override default media storage if cloud credentials are fully configured
+# Django 6.0+: use STORAGES dict instead of deprecated DEFAULT_FILE_STORAGE
 if CLOUDINARY_STORAGE['CLOUD_NAME'] and CLOUDINARY_STORAGE['API_KEY']:
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    STORAGES['default'] = {
+        'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage',
+    }
 
 # Razorpay Configuration
 RAZORPAY_KEY_ID = env('RAZORPAY_KEY_ID', default='')
