@@ -1,10 +1,12 @@
 import React, { useState, useContext, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import NeomorphicCard from './NeomorphicCard';
 import { AuthContext } from '../context/AuthContext';
 import api from '../utils/api';
 
 export default function UserProfileHeader({ profile, subscription, handleToggleOnline }) {
-  const { user, setUser } = useContext(AuthContext);
+  const { user, setUser, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [nickname, setNickname] = useState(user.nickname || '');
   const [username, setUsername] = useState(user.username || '');
@@ -88,17 +90,27 @@ export default function UserProfileHeader({ profile, subscription, handleToggleO
             <input type="file" accept="image/*" className="d-none" ref={avatarInputRef} onChange={(e) => handleImageUpload(e, 'avatar')} />
           </div>
 
-          <div className="text-center text-md-end mt-4 mt-md-0">
+          <div className="text-center text-md-end mt-4 mt-md-0 d-flex gap-2 justify-content-center justify-content-md-end align-items-center">
             {editing ? (
-              <div className="d-flex gap-2">
+              <>
                 <button onClick={handleSaveProfile} className="neo-btn-accent px-4 py-2 rounded-pill shadow">Save</button>
                 <button onClick={() => setEditing(false)} className="neo-btn px-4 py-2 rounded-pill shadow">Cancel</button>
-              </div>
+              </>
             ) : (
               <button onClick={() => setEditing(true)} className="neo-btn px-4 py-2 rounded-pill shadow">
                 <i className="bi bi-pencil-square me-2"></i> Edit Profile
               </button>
             )}
+            <button
+              onClick={async () => {
+                await logout();
+                navigate('/');
+              }}
+              className="neo-btn px-3 py-2 rounded-pill shadow text-danger"
+              title="Logout"
+            >
+              <i className="bi bi-box-arrow-right me-1"></i> Logout
+            </button>
           </div>
         </div>
 
