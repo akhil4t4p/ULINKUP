@@ -23,6 +23,29 @@ class UluCoinWalletViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return UluCoinWallet.objects.filter(user=self.request.user)
 
+    @action(detail=False, methods=['get'])
+    def referral_stats(self, request):
+        from django.db.models import Sum
+        from .models import ReferralTransaction
+        
+        # Count invitees
+        total_invites = ReferralTransaction.objects.filter(inviter=request.user).count()
+        successful_invites = ReferralTransaction.objects.filter(inviter=request.user, status='SUCCESS').count()
+        
+        # Calculate sum of coins earned
+        coins_agg = ReferralTransaction.objects.filter(inviter=request.user, status='SUCCESS').aggregate(Sum('reward_to_inviter'))
+        coins_earned = coins_agg['reward_to_inviter__sum'] or 0
+        
+        pending_invites = ReferralTransaction.objects.filter(inviter=request.user, status='PENDING').count()
+        
+        return Response({
+            'total_invites': total_invites,
+            'successful_invites': successful_invites,
+            'coins_earned': coins_earned,
+            'pending_invites': pending_invites,
+            'referral_code': request.user.referral_code or ''
+        })
+
     @action(detail=False, methods=['post'])
     def create_razorpay_order(self, request):
         amount = request.data.get('amount')

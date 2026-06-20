@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 // Page Imports (Lazy Loaded)
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
+const SignupPage = lazy(() => import('./pages/SignupPage'));
 const AccountSelection = lazy(() => import('./pages/AccountSelection'));
 const CustomerDashboard = lazy(() => import('./pages/CustomerDashboard'));
 const BusinessDashboard = lazy(() => import('./pages/BusinessDashboard'));
@@ -38,6 +39,7 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
             <Route path="/select-account" element={<AccountSelection />} />
             
             {/* Protected Routes */}

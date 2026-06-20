@@ -125,6 +125,19 @@ def google_auth_verify(request):
             user.google_avatar = picture
             user.save(update_fields=['google_avatar'])
 
+        # Initialize wallet and check referral code if new user is created
+        from apps.payments.models import UluCoinWallet
+        UluCoinWallet.objects.get_or_create(user=user)
+
+        if created:
+            ref_code = request.data.get('referral_code') or request.data.get('ref')
+            if ref_code:
+                from .referral import apply_referral
+                apply_referral(user, ref_code)
+
+        # Refresh from DB to get updated coins, role, etc.
+        user.refresh_from_db()
+
         # Generate JWT token pair
         refresh = RefreshToken.for_user(user)
         access_token = refresh.access_token
@@ -139,6 +152,8 @@ def google_auth_verify(request):
                 'role': user.role,
                 'google_avatar': user.google_avatar or '',
                 'avatar_preset': user.avatar_preset or '',
+                'ulu_coins': user.ulu_coins,
+                'referral_code': user.referral_code or '',
                 'is_new': created,
             }
         }, status=status.HTTP_200_OK)
@@ -217,6 +232,18 @@ def developer_mock_login(request):
         user.role = role
         user.save(update_fields=['role'])
 
+    # Initialize wallet and check referral code if new user is created
+    from apps.payments.models import UluCoinWallet
+    UluCoinWallet.objects.get_or_create(user=user)
+
+    if created:
+        ref_code = request.data.get('referral_code') or request.data.get('ref')
+        if ref_code:
+            from .referral import apply_referral
+            apply_referral(user, ref_code)
+
+    user.refresh_from_db()
+
     # Generate SimpleJWT token pair
     refresh = RefreshToken.for_user(user)
 
@@ -228,6 +255,9 @@ def developer_mock_login(request):
             'username': user.username,
             'email': user.email,
             'role': user.role,
+            'ulu_coins': user.ulu_coins,
+            'referral_code': user.referral_code or '',
+            'is_new': created,
         }
     }, status=status.HTTP_200_OK)
 
@@ -246,3 +276,32 @@ class ConfigAPIView(APIView):
             'VITE_GOOGLE_CLIENT_ID': google_client.key_value if google_client and not google_client.is_secret else None,
             'RAZORPAY_KEY_ID': razorpay_key.key_value if razorpay_key and not razorpay_key.is_secret else None,
         })
+
+from rest_framework import viewsets, permissions
+from rest_framework.decorators import action
+from .models import Notification
+from rest_framework.serializers import ModelSerializer
+
+class NotificationSerializer(ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ('id', 'message', 'is_read', 'created_at')
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user).order_by('-created_at')
+
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        notification = self.get_object()
+        notification.is_read = True
+        notification.save()
+        return Response({'status': 'success'})
+
+    @action(detail=False, methods=['post'])
+    def mark_all_read(self, request):
+        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        return Response({'status': 'success'})

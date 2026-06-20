@@ -32,8 +32,8 @@ export default function AdminDashboard() {
     { title: "Today's Revenue", value: `₹${stats.todayRevenue}`, icon: 'bi-graph-up-arrow', color: 'text-success' },
     { title: 'Active Users', value: stats.activeUsers, icon: 'bi-activity', color: 'text-warning' },
     { title: 'Pending Payments', value: stats.pendingPayments, icon: 'bi-clock-history', color: 'text-danger' },
-    { title: 'Total Leads', value: stats.totalLeads, icon: 'bi-bullseye', color: 'text-primary' },
-    { title: 'Groups Created', value: stats.groupsCreated, icon: 'bi-collection-fill', color: 'text-secondary' },
+    { title: 'Total Referrals', value: stats.totalReferrals || 0, icon: 'bi-gift-fill', color: 'text-primary' },
+    { title: 'Coins Distributed', value: `${stats.totalCoinsDistributed || 0} ULU`, icon: 'bi-coin', color: 'text-warning' },
   ];
 
   return (
@@ -93,6 +93,38 @@ export default function AdminDashboard() {
                     </div>
                   );
                 })}
+              </div>
+            </NeomorphicCard>
+          </div>
+        </div>
+      )}
+
+      {stats.topInviters && stats.topInviters.length > 0 && (
+        <div className="row g-4 mt-4">
+          <div className="col-12">
+            <NeomorphicCard className="p-4">
+              <h5 className="fw-bold mb-4"><i className="bi bi-trophy-fill text-warning me-2"></i> Top Referrers / Inviters Leaderboard</h5>
+              <div className="table-responsive">
+                <table className="table table-hover align-middle border-0">
+                  <thead>
+                    <tr className="text-secondary small uppercase border-bottom">
+                      <th>Username</th>
+                      <th>Email</th>
+                      <th className="text-center">Successful Referrals</th>
+                      <th className="text-center">Total Coins Awarded</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.topInviters.map((inviter, idx) => (
+                      <tr key={idx} className="border-bottom">
+                        <td className="fw-bold text-dark">{inviter.inviter__username || 'Anonymous'}</td>
+                        <td>{inviter.inviter__email}</td>
+                        <td className="text-center fw-bold">{inviter.total_referrals}</td>
+                        <td className="text-center text-warning fw-bold">{inviter.total_referrals * 25} ULU</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </NeomorphicCard>
           </div>

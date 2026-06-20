@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import NeomorphicCard from '../components/NeomorphicCard';
 import UserProfileHeader from '../components/UserProfileHeader';
+import ReferralSection from '../components/ReferralSection';
 import { AuthContext } from '../context/AuthContext';
 import api from '../utils/api';
 
@@ -571,6 +572,8 @@ export default function BusinessDashboard() {
               No job inquiries received yet.
             </NeomorphicCard>
           )}
+          
+          <ReferralSection />
         </div>
       )}
 

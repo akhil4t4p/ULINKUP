@@ -52,6 +52,19 @@ class AdminDashboardStatsAPIView(views.APIView):
             r_agg = Transaction.objects.filter(status='SUCCESS', created_at__date=d).aggregate(Sum('amount'))
             revenue_chart.append(float(r_agg['amount__sum'] or 0))
 
+        # Referral Stats
+        from apps.payments.models import ReferralTransaction
+        total_referrals = ReferralTransaction.objects.filter(status='SUCCESS').count()
+        
+        coins_inviter = ReferralTransaction.objects.filter(status='SUCCESS').aggregate(Sum('reward_to_inviter'))['reward_to_inviter__sum'] or 0
+        coins_new_user = ReferralTransaction.objects.filter(status='SUCCESS').aggregate(Sum('reward_to_new_user'))['reward_to_new_user__sum'] or 0
+        total_coins_distributed = coins_inviter + coins_new_user
+        
+        top_inviters = list(ReferralTransaction.objects.filter(status='SUCCESS')
+            .values('inviter__email', 'inviter__username')
+            .annotate(total_referrals=Count('id'))
+            .order_by('-total_referrals')[:5])
+
         return Response({
             'totalUsers': total_users,
             'businessUsers': business_users,
@@ -61,6 +74,9 @@ class AdminDashboardStatsAPIView(views.APIView):
             'pendingPayments': pending_payments,
             'totalLeads': total_leads,
             'groupsCreated': groups_created,
+            'totalReferrals': total_referrals,
+            'totalCoinsDistributed': total_coins_distributed,
+            'topInviters': top_inviters,
             'charts': {
                 'labels': labels,
                 'users': users_chart,

@@ -256,6 +256,7 @@ SIMPLE_JWT = {
 REST_AUTH = {
     'USE_JWT': True,
     'USER_DETAILS_SERIALIZER': 'apps.users.serializers.UserSerializer',
+    'REGISTER_SERIALIZER': 'apps.users.serializers.CustomRegisterSerializer',
     'JWT_AUTH_COOKIE': 'ulinkup-auth',
     'JWT_AUTH_REFRESH_COOKIE': 'ulinkup-refresh',
     'JWT_AUTH_HTTPONLY': True,

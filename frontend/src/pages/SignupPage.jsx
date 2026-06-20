@@ -1,43 +1,62 @@
 import React, { useState, useContext, useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import NeomorphicCard from '../components/NeomorphicCard';
 import api from '../utils/api';
 
-export default function LoginPage() {
+export default function SignupPage() {
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('customer'); // default UI choice
+  const [referralCode, setReferralCode] = useState('');
+  const [role, setRole] = useState('customer'); // customer or business
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleClientId, setGoogleClientId] = useState('');
 
-  const { login, devLogin, googleLogin } = useContext(AuthContext);
+  const { register, googleLogin } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Redirect to original page or fallback to dashboards
-  const from = location.state?.from?.pathname || 
-    (role === 'customer' ? '/customer/dashboard' : '/business/dashboard');
+  // Detect referral code from URL query (?ref=AKHIL12345)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const ref = params.get('ref') || params.get('referral_code');
+    if (ref) {
+      setReferralCode(ref);
+    }
+  }, [location.search]);
 
-  const handleLogin = async (e) => {
+  // Load Google Client ID for Google Sign-In
+  useEffect(() => {
+    const envClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (envClientId) {
+      setGoogleClientId(envClientId);
+      return;
+    }
+    api.get('/api/config/')
+      .then(res => {
+        if (res.data.VITE_GOOGLE_CLIENT_ID) {
+          setGoogleClientId(res.data.VITE_GOOGLE_CLIENT_ID);
+        }
+      })
+      .catch(err => console.warn("Failed to load config from backend", err));
+  }, []);
+
+  const handleSignup = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    // Try real JWT login first (works in production)
-    let result = await login(email, password);
-
-    // If real login fails (no account / wrong password), and we have an email,
-    // fall back to developer mock login (only works locally when DEBUG=True)
-    if (!result.success && result.error === 'Invalid email or password.') {
-      const mockResult = await devLogin(email || 'developer@ulinkup.com', role.toUpperCase());
-      if (mockResult.success) result = mockResult;
-    }
+    const result = await register(username, email, password, role, referralCode);
 
     if (result.success) {
-      const targetPath = result.user.role === 'CUSTOMER' ? '/customer/dashboard' : '/business/dashboard';
-      navigate(targetPath);
+      setSuccess(true);
+      setTimeout(() => {
+        const targetPath = result.user.role === 'CUSTOMER' ? '/customer/dashboard' : '/business/dashboard';
+        navigate(targetPath);
+      }, 1500);
     } else {
       setError(result.error);
     }
@@ -47,34 +66,16 @@ export default function LoginPage() {
   const handleGoogleCredentialResponse = useCallback(async (response) => {
     setError('');
     setLoading(true);
-    const params = new URLSearchParams(location.search);
-    const ref = params.get('ref') || params.get('referral_code') || '';
-    const result = await googleLogin(response.credential, role.toUpperCase(), ref);
+    const result = await googleLogin(response.credential, role.toUpperCase(), referralCode);
     if (result.success) {
       navigate(result.user.role === 'CUSTOMER' ? '/customer/dashboard' : '/business/dashboard');
     } else if (result.code === 'GOOGLE_NOT_CONFIGURED') {
-      setError('Google Sign-In is not configured on this server yet.');
+      setError('Google Sign-In is not configured on this server.');
     } else {
-      setError(result.error || 'Google Authentication failed on backend.');
+      setError(result.error || 'Google Authentication failed.');
     }
     setLoading(false);
-  }, [googleLogin, navigate, role, location.search]);
-
-  useEffect(() => {
-    // Use env var first (set at Vercel build time) — no backend call needed
-    const envClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (envClientId) {
-      setGoogleClientId(envClientId);
-      return;
-    }
-    // Fallback: fetch from backend config API
-    api.get('/api/config/').then(res => {
-      const clientId = res.data.VITE_GOOGLE_CLIENT_ID;
-      if (clientId) {
-        setGoogleClientId(clientId);
-      }
-    }).catch(err => console.warn("Failed to load config from backend", err));
-  }, []);
+  }, [googleLogin, navigate, role, referralCode]);
 
   useEffect(() => {
     if (googleClientId && window.google) {
@@ -93,7 +94,7 @@ export default function LoginPage() {
     if (googleClientId && window.google) {
       window.google.accounts.id.prompt();
     } else {
-      setError('Google Sign-In is not available. Please use email login.');
+      setError('Google Sign-In is not available. Please use email registration.');
     }
   };
 
@@ -105,8 +106,8 @@ export default function LoginPage() {
             <span className="fw-black fs-2 text-primary">
               <i className="bi bi-link-45deg"></i>U<span style={{ fontWeight: '300' }}>LINKUP</span>
             </span>
-            <h4 className="mt-3">Welcome Back</h4>
-            <p className="text-muted small">Sign in to connect with your local network</p>
+            <h4 className="mt-3">Create an Account</h4>
+            <p className="text-muted small">Join the hyperlocal network platform</p>
           </div>
 
           {error && (
@@ -114,8 +115,14 @@ export default function LoginPage() {
               <i className="bi bi-exclamation-triangle-fill me-2"></i> {error}
             </div>
           )}
-          
-          <form onSubmit={handleLogin}>
+
+          {success && (
+            <div className="alert alert-success neo-inset border-0 text-success small py-3 mb-4" role="alert">
+              <i className="bi bi-check-circle-fill me-2"></i> Registration successful! Redirecting...
+            </div>
+          )}
+
+          <form onSubmit={handleSignup}>
             {/* Account Type Selection */}
             <div className="mb-4">
               <label className="form-label fw-bold text-secondary">Select Account Type</label>
@@ -140,6 +147,19 @@ export default function LoginPage() {
             </div>
 
             <div className="mb-3">
+              <label className="form-label fw-bold text-secondary">Username</label>
+              <input 
+                type="text" 
+                className="form-control neo-input" 
+                placeholder="e.g. akhil" 
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={loading}
+                required 
+              />
+            </div>
+
+            <div className="mb-3">
               <label className="form-label fw-bold text-secondary">Email Address</label>
               <input 
                 type="email" 
@@ -152,7 +172,7 @@ export default function LoginPage() {
               />
             </div>
             
-            <div className="mb-4">
+            <div className="mb-3">
               <label className="form-label fw-bold text-secondary">Password</label>
               <input 
                 type="password" 
@@ -164,15 +184,32 @@ export default function LoginPage() {
                 required 
               />
             </div>
+
+            <div className="mb-4">
+              <label className="form-label fw-bold text-secondary">Referral Code (Optional)</label>
+              <input 
+                type="text" 
+                className="form-control neo-input" 
+                placeholder="e.g. AKHIL12345" 
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value)}
+                disabled={loading}
+              />
+              {referralCode && (
+                <div className="form-text text-success small mt-1">
+                  <i className="bi bi-gift-fill me-1"></i> You will receive 500 ULU Coins upon successful registration!
+                </div>
+              )}
+            </div>
             
             <button 
               type="submit" 
               className="w-100 neo-btn-accent py-3 mb-4"
-              disabled={loading}
+              disabled={loading || success}
             >
               {loading ? (
                 <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-              ) : 'Sign In Securely'}
+              ) : 'Register Account'}
             </button>
           </form>
           
@@ -181,7 +218,7 @@ export default function LoginPage() {
             <span className="position-absolute top-50 start-50 translate-middle bg-body px-3 text-muted small">OR CONTINUE WITH</span>
           </div>
           
-          {/* Premium Google Sign-In Button */}
+          {/* Google Sign-In Button */}
           {googleClientId && window.google ? (
             <div id="googleBtnContainer" className="w-100"></div>
           ) : (
@@ -189,10 +226,9 @@ export default function LoginPage() {
               type="button" 
               onClick={handleGoogleOAuth}
               className="google-signin-btn w-100 py-3 d-flex align-items-center justify-content-center gap-3"
-              disabled={loading}
+              disabled={loading || success}
               id="google-signin-button"
             >
-              {/* Official Google "G" Logo */}
               <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
                 <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
                 <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
@@ -205,11 +241,11 @@ export default function LoginPage() {
           )}
 
           <div className="text-center mt-4">
-            <span className="text-secondary small">Don't have an account? </span>
-            <Link to={`/signup${location.search}`} className="small text-primary fw-bold text-decoration-none">Sign Up</Link>
+            <span className="text-secondary small">Already have an account? </span>
+            <Link to="/login" className="small text-primary fw-bold text-decoration-none">Sign In</Link>
           </div>
 
-          {/* Google Sign-In button styles */}
+          {/* Inline Styles for Google Button */}
           <style>{`
             .google-signin-btn {
               position: relative;

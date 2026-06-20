@@ -83,14 +83,54 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Google OAuth Login — verifies Google id_token on the backend
-  const googleLogin = async (credential, role = 'CUSTOMER') => {
+  // Email + password registration
+  const register = async (username, email, password, role = 'CUSTOMER', referralCode = '') => {
     try {
       setLoading(true);
-      // Send Google credential (id_token JWT) + desired role to backend
+      const res = await api.post('/api/auth/registration/', {
+        username,
+        email,
+        password1: password,
+        password2: password,
+        role: role.toUpperCase(),
+        referral_code: referralCode
+      });
+      
+      const accessToken = res.data.access_token || res.data.access || res.data.key;
+      const refreshToken = res.data.refresh_token || res.data.refresh;
+      const userData = res.data.user;
+
+      if (accessToken) {
+        localStorage.setItem('access_token', accessToken);
+        if (refreshToken) localStorage.setItem('refresh_token', refreshToken);
+        localStorage.setItem('user', JSON.stringify(userData));
+        setUser(userData);
+      }
+      return { success: true, user: userData };
+    } catch (err) {
+      const errData = err.response?.data;
+      const message = errData?.detail || 
+                    errData?.non_field_errors?.[0] || 
+                    errData?.email?.[0] || 
+                    errData?.username?.[0] || 
+                    errData?.password?.[0] || 
+                    errData?.password1?.[0] || 
+                    'Registration failed. Email or username might be already taken.';
+      return { success: false, error: message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Google OAuth Login — verifies Google id_token on the backend
+  const googleLogin = async (credential, role = 'CUSTOMER', referralCode = '') => {
+    try {
+      setLoading(true);
+      // Send Google credential (id_token JWT) + desired role + referral code to backend
       const res = await api.post('/api/auth/google/', {
         credential,   // Google GSI id_token
         role,         // CUSTOMER or BUSINESS
+        referral_code: referralCode
       });
 
       const { access_token, refresh_token, user: userData } = res.data;
@@ -144,6 +184,7 @@ export function AuthProvider({ children }) {
     loading,
     isAuthenticated: !!user,
     login,
+    register,
     devLogin,
     googleLogin,
     logout

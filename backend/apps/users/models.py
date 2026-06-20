@@ -16,9 +16,30 @@ class User(AbstractUser):
     google_avatar = models.URLField(max_length=500, blank=True, null=True, help_text='Google profile picture URL')
     avatar_preset = models.CharField(max_length=50, blank=True, null=True, help_text='Preset avatar name e.g. male_bear')
     
+    # Referral System fields
+    referral_code = models.CharField(max_length=20, unique=True, blank=True, null=True, db_index=True)
+    referred_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='referees')
+    ulu_coins = models.PositiveIntegerField(default=0, help_text='Cached balance from UluCoinWallet')
+
     # Customise USERNAME_FIELD to use email for logins
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
+
+    def save(self, *args, **kwargs):
+        if not self.referral_code:
+            import random
+            import string
+            base = self.username.upper().replace(' ', '')[:5] if self.username else 'USER'
+            if not base:
+                base = 'USER'
+            while True:
+                suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+                candidate = f"{base}{suffix}"
+                # Using a raw check or simple queryset check
+                if not User.objects.filter(referral_code=candidate).exists():
+                    self.referral_code = candidate
+                    break
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.email} - {self.role}"
@@ -75,5 +96,14 @@ class ContentBlock(models.Model):
 
     def __str__(self):
         return f"{self.section} - {self.key}"
+
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Notification for {self.user.email}: {self.message[:30]}"
 
 

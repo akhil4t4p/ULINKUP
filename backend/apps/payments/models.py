@@ -66,3 +66,22 @@ class Transaction(models.Model):
 
     def __str__(self):
         return f"{self.transaction_type} of ₹{self.amount} for {self.user.username} - {self.status}"
+
+class ReferralTransaction(models.Model):
+    inviter = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='referral_invitations'
+    )
+    new_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='referral_received'
+    )
+    reward_to_inviter = models.PositiveIntegerField(default=25)
+    reward_to_new_user = models.PositiveIntegerField(default=500)
+    status = models.CharField(max_length=15, default='SUCCESS')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Referral: {self.new_user.username} referred by {self.inviter.username} - {self.status}"

@@ -9,7 +9,7 @@ from rest_framework_simplejwt.views import (
 )
 
 # Views Imports
-from apps.users.views import GoogleLogin, google_auth_verify, developer_mock_login, ConfigAPIView
+from apps.users.views import GoogleLogin, google_auth_verify, developer_mock_login, ConfigAPIView, NotificationViewSet
 from apps.customers.views import CustomerProfileViewSet
 from apps.businesses.views import CategoryViewSet, BusinessProfileViewSet, BusinessPortfolioViewSet, LeadViewSet
 from apps.reviews.views import ReviewViewSet
@@ -34,6 +34,7 @@ router.register('leads', LeadViewSet, basename='lead')
 router.register('reviews', ReviewViewSet, basename='review')
 router.register('coin-wallets', UluCoinWalletViewSet, basename='coin-wallet')
 router.register('coin-transactions', CoinTransactionHistoryViewSet, basename='coin-transaction')
+router.register('notifications', NotificationViewSet, basename='notification')
 router.register('transactions', TransactionViewSet, basename='transaction')
 router.register('ads', AdvertisementViewSet, basename='ad')
 router.register('subscriptions', SubscriptionViewSet, basename='subscription')
