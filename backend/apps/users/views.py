@@ -305,3 +305,73 @@ class NotificationViewSet(viewsets.ModelViewSet):
     def mark_all_read(self, request):
         Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
         return Response({'status': 'success'})
+
+
+# ─── Custom Token Refresh with Safe User Validation ─────────────────────────────
+# Subclasses dj-rest-auth's CookieTokenRefreshSerializer to handle deleted/non-existent
+# users gracefully without throwing an unhandled User.DoesNotExist (500 error).
+from rest_framework_simplejwt.views import TokenRefreshView
+from dj_rest_auth.jwt_auth import CookieTokenRefreshSerializer, set_jwt_access_cookie, set_jwt_refresh_cookie
+from dj_rest_auth.app_settings import api_settings as rest_auth_settings
+from rest_framework_simplejwt.settings import api_settings as jwt_settings
+from rest_framework.exceptions import ValidationError, AuthenticationFailed
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from rest_framework import serializers
+
+class CustomCookieTokenRefreshSerializer(CookieTokenRefreshSerializer):
+    def validate(self, attrs):
+        attrs['refresh'] = self.extract_refresh_token()
+        
+        refresh = self.token_class(attrs["refresh"])
+        user_id = refresh.payload.get(jwt_settings.USER_ID_CLAIM, None)
+        if user_id:
+            try:
+                user = get_user_model().objects.get(
+                    **{jwt_settings.USER_ID_FIELD: user_id}
+                )
+            except get_user_model().DoesNotExist:
+                raise ValidationError(
+                    self.error_messages["no_active_account"],
+                    "no_active_account",
+                )
+
+            if not jwt_settings.USER_AUTHENTICATION_RULE(user):
+                raise AuthenticationFailed(
+                    self.error_messages["no_active_account"],
+                    "no_active_account",
+                )
+
+        data = {"access": str(refresh.access_token)}
+
+        if jwt_settings.ROTATE_REFRESH_TOKENS:
+            if jwt_settings.BLACKLIST_AFTER_ROTATION:
+                try:
+                    refresh.blacklist()
+                except AttributeError:
+                    pass
+
+            refresh.set_jti()
+            refresh.set_exp()
+            refresh.set_iat()
+            refresh.outstand()
+
+            data["refresh"] = str(refresh)
+
+        return data
+
+class CustomTokenRefreshView(TokenRefreshView):
+    serializer_class = CustomCookieTokenRefreshSerializer
+
+    def finalize_response(self, request, response, *args, **kwargs):
+        if response.status_code == status.HTTP_200_OK and 'access' in response.data:
+            set_jwt_access_cookie(response, response.data['access'])
+            response.data['access_expiration'] = (timezone.now() + jwt_settings.ACCESS_TOKEN_LIFETIME)
+        if response.status_code == status.HTTP_200_OK and 'refresh' in response.data:
+            set_jwt_refresh_cookie(response, response.data['refresh'])
+            if rest_auth_settings.JWT_AUTH_HTTPONLY:
+                del response.data['refresh']
+            else:
+                response.data['refresh_expiration'] = (timezone.now() + jwt_settings.REFRESH_TOKEN_LIFETIME)
+        return super().finalize_response(request, response, *args, **kwargs)
+
