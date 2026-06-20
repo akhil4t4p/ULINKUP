@@ -114,7 +114,7 @@ export default function UserProfileHeader({ profile, subscription, handleToggleO
                 }
               }}
             >
-              <div className="p-1 bg-white shadow-lg d-inline-block position-relative" style={{ width: '140px', height: '140px', borderRadius: '24px' }}>
+              <div className="p-1 bg-white shadow-lg d-inline-block position-relative" style={{ width: '140px', height: '140px', borderRadius: '24px', border: '3px solid #D4AF37' }}>
                 {avatarUrl ? (
                   <img 
                     src={avatarUrl} 
