@@ -31,8 +31,11 @@ export default function UserProfileHeader({ profile, subscription, handleToggleO
   const subscriptionPlan = subscription?.plan_type || profile?.subscription_plan || 'FREE';
   const bannerSrc = MEMBERSHIP_BANNERS[subscriptionPlan] || MEMBERSHIP_BANNERS.FREE;
 
-  // Resolve the avatar display URL: avatar_preset > uploaded avatar > google_avatar > fallback
+  // Resolve the avatar display URL: Google profile picture only for business; presets > uploaded > google for customer
   const getAvatarUrl = () => {
+    if (isBusiness) {
+      return user.google_avatar || null;
+    }
     if (user.avatar_preset) {
       return `/avatars/${user.avatar_preset}.png`;
     }
@@ -45,27 +48,6 @@ export default function UserProfileHeader({ profile, subscription, handleToggleO
     return null;
   };
   const avatarUrl = getAvatarUrl();
-
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append('avatar', file);
-
-    try {
-      const res = await api.patch('/api/auth/user/', formData, {
-        headers: { 'Content-Type': undefined }
-      });
-      if (res.status === 200) {
-        setUser(res.data);
-        localStorage.setItem('user', JSON.stringify(res.data));
-      }
-    } catch (err) {
-      console.error('Upload avatar error:', err.response?.data || err);
-      alert(`Failed to upload avatar. ${err.response?.data?.detail || ''}`);
-    }
-  };
 
   const handleSaveProfile = async () => {
     try {
@@ -125,12 +107,10 @@ export default function UserProfileHeader({ profile, subscription, handleToggleO
             {/* Avatar Section */}
             <div 
               className="text-center text-md-start mb-3 mb-md-0 position-relative z-1" 
-              style={{ cursor: 'pointer' }} 
+              style={{ cursor: isCustomer ? 'pointer' : 'default' }} 
               onClick={() => {
                 if (isCustomer) {
                   setShowAvatarPicker(true);
-                } else if (isBusiness) {
-                  avatarInputRef.current?.click();
                 }
               }}
             >
@@ -148,19 +128,13 @@ export default function UserProfileHeader({ profile, subscription, handleToggleO
                     <i className="bi bi-person-fill fs-1 text-secondary"></i>
                   </div>
                 )}
-                {/* Edit icon overlay */}
-                <div className="position-absolute bottom-0 end-0 bg-dark rounded-circle p-2 shadow d-flex align-items-center justify-content-center" style={{ width: '35px', height: '35px', transform: 'translate(5px, 5px)' }}>
-                  {isCustomer ? (
+                {/* Edit icon overlay — Customer only */}
+                {isCustomer && (
+                  <div className="position-absolute bottom-0 end-0 bg-dark rounded-circle p-2 shadow d-flex align-items-center justify-content-center" style={{ width: '35px', height: '35px', transform: 'translate(5px, 5px)' }}>
                     <i className="bi bi-grid-fill text-white small"></i>
-                  ) : (
-                    <i className="bi bi-camera-fill text-white small"></i>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
-              {/* Hidden file input — business only */}
-              {isBusiness && (
-                <input type="file" accept="image/*" className="d-none" ref={avatarInputRef} onChange={handleImageUpload} />
-              )}
             </div>
 
             {/* Action buttons */}

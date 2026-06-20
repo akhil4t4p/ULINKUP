@@ -96,9 +96,11 @@ export default function Navbar() {
               {/* User Avatar */}
               <div className="mx-auto mb-2" style={{ width: '50px', height: '50px' }}>
                 {(() => {
-                  const src = user.avatar_preset 
-                    ? `/avatars/${user.avatar_preset}.png` 
-                    : user.avatar || user.google_avatar || null;
+                  const src = user.role === 'BUSINESS'
+                    ? user.google_avatar || null
+                    : user.avatar_preset 
+                      ? `/avatars/${user.avatar_preset}.png` 
+                      : user.avatar || user.google_avatar || null;
                   return src ? (
                     <img 
                       src={src} 
