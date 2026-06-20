@@ -10,7 +10,6 @@ export default function LoginPage() {
   const [role, setRole] = useState('customer'); // default UI choice
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showMockGoogleModal, setShowMockGoogleModal] = useState(false);
   const [googleClientId, setGoogleClientId] = useState('');
 
   const { login, devLogin, googleLogin } = useContext(AuthContext);
@@ -52,9 +51,7 @@ export default function LoginPage() {
     if (result.success) {
       navigate(result.user.role === 'CUSTOMER' ? '/customer/dashboard' : '/business/dashboard');
     } else if (result.code === 'GOOGLE_NOT_CONFIGURED') {
-      // Backend not configured — fall back to mock selector
-      setLoading(false);
-      setShowMockGoogleModal(true);
+      setError('Google Sign-In is not configured on this server yet.');
     } else {
       setError(result.error || 'Google Authentication failed on backend.');
     }
@@ -91,12 +88,10 @@ export default function LoginPage() {
   }, [role, handleGoogleCredentialResponse, googleClientId]);
 
   const handleGoogleOAuth = async () => {
-    if (googleClientId) {
-      if (window.google) {
-        window.google.accounts.id.prompt();
-      }
+    if (googleClientId && window.google) {
+      window.google.accounts.id.prompt();
     } else {
-      setShowMockGoogleModal(true);
+      setError('Google Sign-In is not available. Please use email login.');
     }
   };
 
@@ -184,77 +179,81 @@ export default function LoginPage() {
             <span className="position-absolute top-50 start-50 translate-middle bg-body px-3 text-muted small">OR CONTINUE WITH</span>
           </div>
           
-          {googleClientId ? (
+          {/* Premium Google Sign-In Button */}
+          {googleClientId && window.google ? (
             <div id="googleBtnContainer" className="w-100"></div>
           ) : (
             <button 
               type="button" 
               onClick={handleGoogleOAuth}
-              className="w-100 neo-btn py-3 d-flex align-items-center justify-content-center gap-2"
+              className="google-signin-btn w-100 py-3 d-flex align-items-center justify-content-center gap-3"
               disabled={loading}
+              id="google-signin-button"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" className="bi bi-google text-primary" viewBox="0 0 16 16">
-                <path d="M15.545 6.558a9.4 9.4 0 0 1 .139 1.626c0 2.434-.87 4.492-2.384 5.885h.002C11.978 15.292 10.158 16 8 16A8 8 0 1 1 8 0c2.198 0 4.086.786 5.544 2.146l-2.26 2.26C10.22 3.393 9.244 3 8 3c-2.79 0-5.051 2.26-5.051 5s2.261 5 5.051 5c3.07 0 5.056-2.094 5.056-5.19 0-.315-.028-.621-.082-.9H8V6.57h7.545z"/>
+              {/* Official Google "G" Logo */}
+              <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                <path fill="none" d="M0 0h48v48H0z"/>
               </svg>
-              Google Account
+              <span className="fw-semibold">Continue with Google</span>
             </button>
           )}
+
+          {/* Google Sign-In button styles */}
+          <style>{`
+            .google-signin-btn {
+              position: relative;
+              background: #ffffff;
+              border: 1.5px solid #dadce0;
+              border-radius: 12px;
+              cursor: pointer;
+              font-size: 15px;
+              color: #3c4043;
+              letter-spacing: 0.25px;
+              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+              overflow: hidden;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            }
+            .google-signin-btn::before {
+              content: '';
+              position: absolute;
+              inset: 0;
+              background: linear-gradient(135deg, rgba(66,133,244,0.06), rgba(234,67,53,0.06), rgba(251,188,5,0.06), rgba(52,168,83,0.06));
+              opacity: 0;
+              transition: opacity 0.3s ease;
+            }
+            .google-signin-btn:hover {
+              border-color: #4285F4;
+              box-shadow: 0 4px 15px rgba(66,133,244,0.2), 0 2px 6px rgba(0,0,0,0.08);
+              transform: translateY(-2px);
+            }
+            .google-signin-btn:hover::before {
+              opacity: 1;
+            }
+            .google-signin-btn:active {
+              transform: translateY(0) scale(0.98);
+              box-shadow: 0 1px 4px rgba(66,133,244,0.15);
+            }
+            .google-signin-btn:disabled {
+              opacity: 0.6;
+              cursor: not-allowed;
+              transform: none;
+            }
+            [data-theme="dark"] .google-signin-btn {
+              background: #2d2d2d;
+              border-color: #444;
+              color: #e8eaed;
+            }
+            [data-theme="dark"] .google-signin-btn:hover {
+              border-color: #4285F4;
+              box-shadow: 0 4px 15px rgba(66,133,244,0.3), 0 2px 6px rgba(0,0,0,0.3);
+            }
+          `}</style>
         </NeomorphicCard>
       </div>
-
-      {/* Neomorphic Mock Google Selector Modal */}
-      {showMockGoogleModal && (
-        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" style={{ backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 1050 }}>
-          <div className="w-100 px-3" style={{ maxWidth: '450px' }}>
-            <NeomorphicCard className="p-4" elevation="convex">
-              <div className="d-flex justify-content-between align-items-center mb-4">
-                <h5 className="fw-bold mb-0">Sign in with Google</h5>
-                <button type="button" className="btn-close" onClick={() => setShowMockGoogleModal(false)} aria-label="Close"></button>
-              </div>
-              
-              <p className="text-secondary small mb-3">Choose a simulated Google Account to continue to <strong>ULINKUP</strong>:</p>
-              
-              <div className="d-flex flex-column gap-3 mb-4">
-                {[
-                  { name: 'Alex Smith', email: 'alex.smith@gmail.com', role: 'CUSTOMER', avatar: 'AS' },
-                  { name: 'Sarah Jones', email: 'sarah.jones@gmail.com', role: 'CUSTOMER', avatar: 'SJ' },
-                  { name: 'John Doe (Plumber)', email: 'john.doe@gmail.com', role: 'BUSINESS', avatar: 'JD' },
-                  { name: 'Jane Doe (Tutor)', email: 'jane.doe@gmail.com', role: 'BUSINESS', avatar: 'JD' }
-                ].map(acct => (
-                  <button 
-                    key={acct.email}
-                    type="button"
-                    onClick={async () => {
-                      setShowMockGoogleModal(false);
-                      setLoading(true);
-                      const result = await devLogin(acct.email, acct.role);
-                      if (result.success) {
-                        navigate(acct.role === 'CUSTOMER' ? '/customer/dashboard' : '/business/dashboard');
-                      } else {
-                        setError("Google mock login failed.");
-                      }
-                      setLoading(false);
-                    }}
-                    className="neo-btn p-3 d-flex align-items-center gap-3 text-start w-100"
-                  >
-                    <div className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style={{ width: '40px', height: '40px' }}>
-                      {acct.avatar}
-                    </div>
-                    <div>
-                      <div className="fw-bold text-dark">{acct.name}</div>
-                      <div className="text-muted small">{acct.email} • {acct.role}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              
-              <div className="text-muted small text-center mt-3">
-                To use real Google Sign-In, add a <strong>GOOGLE_CLIENT_ID</strong> in the Super Admin <strong>API Keys</strong> panel.
-              </div>
-            </NeomorphicCard>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

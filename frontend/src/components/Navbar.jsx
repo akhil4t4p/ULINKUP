@@ -93,6 +93,27 @@ export default function Navbar() {
           
           {isAuthenticated ? (
             <div className="neo-flat p-3 text-center rounded-4 mt-2">
+              {/* User Avatar */}
+              <div className="mx-auto mb-2" style={{ width: '50px', height: '50px' }}>
+                {(() => {
+                  const src = user.avatar_preset 
+                    ? `/avatars/${user.avatar_preset}.png` 
+                    : user.avatar || user.google_avatar || null;
+                  return src ? (
+                    <img 
+                      src={src} 
+                      alt="Avatar" 
+                      className="rounded-circle w-100 h-100" 
+                      style={{ objectFit: 'cover' }} 
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="rounded-circle w-100 h-100 bg-light d-flex align-items-center justify-content-center">
+                      <i className="bi bi-person-fill text-secondary"></i>
+                    </div>
+                  );
+                })()}
+              </div>
               <div className="fw-bold small text-primary text-truncate">{user.email}</div>
               <span className="neo-badge py-0 px-2 my-2 d-inline-block" style={{ fontSize: '0.7rem' }}>{user.role}</span>
               

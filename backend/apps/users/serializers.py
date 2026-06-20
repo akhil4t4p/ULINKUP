@@ -6,8 +6,8 @@ from .models import User, UsernameChangeLog
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'nickname', 'avatar', 'banner', 'role', 'is_staff', 'is_active')
-        read_only_fields = ('id', 'is_staff', 'is_active')
+        fields = ('id', 'username', 'email', 'nickname', 'avatar', 'banner', 'google_avatar', 'avatar_preset', 'role', 'is_staff', 'is_active')
+        read_only_fields = ('id', 'is_staff', 'is_active', 'google_avatar')
 
     def validate_username(self, value):
         user = self.instance

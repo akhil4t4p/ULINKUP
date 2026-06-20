@@ -13,6 +13,8 @@ class User(AbstractUser):
     nickname = models.CharField(max_length=50, blank=True)
     avatar = models.ImageField(upload_to='users/avatars/', blank=True, null=True)
     banner = models.ImageField(upload_to='users/banners/', blank=True, null=True)
+    google_avatar = models.URLField(max_length=500, blank=True, null=True, help_text='Google profile picture URL')
+    avatar_preset = models.CharField(max_length=50, blank=True, null=True, help_text='Preset avatar name e.g. male_bear')
     
     # Customise USERNAME_FIELD to use email for logins
     USERNAME_FIELD = 'email'

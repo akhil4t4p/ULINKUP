@@ -81,6 +81,7 @@ def google_auth_verify(request):
         given_name = idinfo.get('given_name', '')
         google_id = idinfo.get('sub')
         email_verified = idinfo.get('email_verified', False)
+        picture = idinfo.get('picture', '')
 
         if not email:
             return Response(
@@ -119,6 +120,11 @@ def google_auth_verify(request):
             user.username = username
             user.save(update_fields=['username'])
 
+        # Save Google profile picture URL
+        if picture:
+            user.google_avatar = picture
+            user.save(update_fields=['google_avatar'])
+
         # Generate JWT token pair
         refresh = RefreshToken.for_user(user)
         access_token = refresh.access_token
@@ -131,6 +137,8 @@ def google_auth_verify(request):
                 'username': user.username,
                 'email': user.email,
                 'role': user.role,
+                'google_avatar': user.google_avatar or '',
+                'avatar_preset': user.avatar_preset or '',
                 'is_new': created,
             }
         }, status=status.HTTP_200_OK)
