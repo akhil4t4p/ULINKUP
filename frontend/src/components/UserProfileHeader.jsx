@@ -134,22 +134,22 @@ export default function UserProfileHeader({ profile, subscription, handleToggleO
                 }
               }}
             >
-              <div className="rounded-circle p-1 bg-white shadow-lg d-inline-block position-relative" style={{ width: '140px', height: '140px' }}>
+              <div className="p-1 bg-white shadow-lg d-inline-block position-relative" style={{ width: '140px', height: '140px', borderRadius: '24px' }}>
                 {avatarUrl ? (
                   <img 
                     src={avatarUrl} 
                     alt="Avatar" 
-                    className="rounded-circle w-100 h-100" 
-                    style={{ objectFit: 'cover' }} 
+                    className="w-100 h-100" 
+                    style={{ objectFit: 'cover', borderRadius: '20px' }} 
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <div className="rounded-circle w-100 h-100 bg-light d-flex align-items-center justify-content-center">
+                  <div className="w-100 h-100 bg-light d-flex align-items-center justify-content-center" style={{ borderRadius: '20px' }}>
                     <i className="bi bi-person-fill fs-1 text-secondary"></i>
                   </div>
                 )}
                 {/* Edit icon overlay */}
-                <div className="position-absolute bottom-0 end-0 bg-dark rounded-circle p-2 shadow d-flex align-items-center justify-content-center" style={{ width: '35px', height: '35px', transform: 'translate(-10px, -10px)' }}>
+                <div className="position-absolute bottom-0 end-0 bg-dark rounded-circle p-2 shadow d-flex align-items-center justify-content-center" style={{ width: '35px', height: '35px', transform: 'translate(5px, 5px)' }}>
                   {isCustomer ? (
                     <i className="bi bi-grid-fill text-white small"></i>
                   ) : (
