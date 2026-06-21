@@ -32,6 +32,11 @@ export default function ProtectedRoute({ children, allowedRoles = [] }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Force profile optimization if not done yet, except when already on that page
+  if (user && !user.is_profile_optimized && location.pathname !== '/optimize-profile') {
+    return <Navigate to="/optimize-profile" replace />;
+  }
+
   // If user role is not permitted — redirect to their correct dashboard
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role.toUpperCase())) {
     const fallback = user.role === 'BUSINESS' ? '/business/dashboard' : '/customer/dashboard';

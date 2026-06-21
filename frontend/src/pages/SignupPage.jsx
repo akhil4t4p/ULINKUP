@@ -54,8 +54,12 @@ export default function SignupPage() {
     if (result.success) {
       setSuccess(true);
       setTimeout(() => {
-        const targetPath = result.user.role === 'CUSTOMER' ? '/customer/dashboard' : '/business/dashboard';
-        navigate(targetPath);
+        if (!result.user.is_profile_optimized) {
+          navigate('/optimize-profile');
+        } else {
+          const targetPath = result.user.role === 'CUSTOMER' ? '/customer/dashboard' : '/business/dashboard';
+          navigate(targetPath);
+        }
       }, 1500);
     } else {
       setError(result.error);
@@ -68,7 +72,11 @@ export default function SignupPage() {
     setLoading(true);
     const result = await googleLogin(response.credential, role.toUpperCase(), referralCode);
     if (result.success) {
-      navigate(result.user.role === 'CUSTOMER' ? '/customer/dashboard' : '/business/dashboard');
+      if (!result.user.is_profile_optimized) {
+        navigate('/optimize-profile');
+      } else {
+        navigate(result.user.role === 'CUSTOMER' ? '/customer/dashboard' : '/business/dashboard');
+      }
     } else if (result.code === 'GOOGLE_NOT_CONFIGURED') {
       setError('Google Sign-In is not configured on this server.');
     } else {

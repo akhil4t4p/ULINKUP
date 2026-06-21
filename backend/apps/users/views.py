@@ -26,6 +26,15 @@ def _user_to_dict(user):
         'referral_code': getattr(user, 'referral_code', '') or '',
         'is_staff': user.is_staff,
         'has_used_referral': user.referred_by is not None,
+        'is_profile_optimized': getattr(user, 'is_profile_optimized', False),
+        'phone_number': getattr(user, 'phone_number', ''),
+        'whatsapp_number': getattr(user, 'whatsapp_number', ''),
+        'business_email': getattr(user, 'business_email', ''),
+        'instagram_url': getattr(user, 'instagram_url', ''),
+        'youtube_url': getattr(user, 'youtube_url', ''),
+        'facebook_url': getattr(user, 'facebook_url', ''),
+        'telegram_url': getattr(user, 'telegram_url', ''),
+        'tiktok_url': getattr(user, 'tiktok_url', ''),
     }
 
 
@@ -58,6 +67,44 @@ def current_user_details(request):
     Uses standard Bearer token auth from the Authorization header.
     """
     return Response(_user_to_dict(request.user), status=status.HTTP_200_OK)
+
+# ─── Profile Optimization Endpoint ───────────────────────────────────────────
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def optimize_profile(request):
+    """
+    PATCH /api/auth/optimize-profile/
+    Body: phone_number, whatsapp_number, business_email, social URLs
+    Updates the user profile and sets is_profile_optimized = True.
+    """
+    user = request.user
+    
+    # Check for mandatory fields
+    phone_number = request.data.get('phone_number')
+    whatsapp_number = request.data.get('whatsapp_number')
+    business_email = request.data.get('business_email')
+    
+    if not phone_number or not whatsapp_number or not business_email:
+        return Response(
+            {'error': 'Phone number, WhatsApp number, and Business Email are required.'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+        
+    # Update fields
+    user.phone_number = phone_number
+    user.whatsapp_number = whatsapp_number
+    user.business_email = business_email
+    
+    user.instagram_url = request.data.get('instagram_url', '')
+    user.youtube_url = request.data.get('youtube_url', '')
+    user.facebook_url = request.data.get('facebook_url', '')
+    user.telegram_url = request.data.get('telegram_url', '')
+    user.tiktok_url = request.data.get('tiktok_url', '')
+    
+    user.is_profile_optimized = True
+    user.save()
+    
+    return Response({'success': True, 'user': _user_to_dict(user)})
 
 # ─── Manual Referral Code Application ─────────────────────────────────────────
 @api_view(['POST'])

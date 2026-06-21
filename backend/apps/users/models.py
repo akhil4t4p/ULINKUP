@@ -20,6 +20,17 @@ class User(AbstractUser):
     referral_code = models.CharField(max_length=20, unique=True, blank=True, null=True, db_index=True)
     referred_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='referees')
     ulu_coins = models.PositiveIntegerField(default=0, help_text='Cached balance from UluCoinWallet')
+    
+    # Profile Optimization Fields
+    phone_number = models.CharField(max_length=20, blank=True)
+    whatsapp_number = models.CharField(max_length=20, blank=True)
+    business_email = models.EmailField(blank=True, null=True)
+    instagram_url = models.URLField(max_length=500, blank=True)
+    youtube_url = models.URLField(max_length=500, blank=True)
+    facebook_url = models.URLField(max_length=500, blank=True)
+    telegram_url = models.URLField(max_length=500, blank=True)
+    tiktok_url = models.URLField(max_length=500, blank=True)
+    is_profile_optimized = models.BooleanField(default=False)
 
     # Customise USERNAME_FIELD to use email for logins
     USERNAME_FIELD = 'email'

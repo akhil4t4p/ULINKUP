@@ -8,7 +8,7 @@ from rest_framework_simplejwt.views import (
 )
 
 # Views Imports
-from apps.users.views import GoogleLogin, google_auth_verify, developer_mock_login, ConfigAPIView, NotificationViewSet, CustomTokenRefreshView, CustomTokenObtainPairView, current_user_details, apply_manual_referral
+from apps.users.views import GoogleLogin, google_auth_verify, developer_mock_login, ConfigAPIView, NotificationViewSet, CustomTokenRefreshView, CustomTokenObtainPairView, current_user_details, apply_manual_referral, optimize_profile
 from apps.customers.views import CustomerProfileViewSet
 from apps.businesses.views import CategoryViewSet, BusinessProfileViewSet, BusinessPortfolioViewSet, LeadViewSet
 from apps.reviews.views import ReviewViewSet
@@ -77,6 +77,9 @@ urlpatterns = [
     
     # Standalone user details (header-based JWT, not cookie-dependent)
     path('api/auth/me/', current_user_details, name='current_user_details'),
+    
+    # Profile Optimization
+    path('api/auth/optimize-profile/', optimize_profile, name='optimize_profile'),
     
     # Manual Referral Application
     path('api/auth/referral/apply/', apply_manual_referral, name='apply_manual_referral'),

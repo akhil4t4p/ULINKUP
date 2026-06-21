@@ -14,6 +14,7 @@ const SearchPage = lazy(() => import('./pages/SearchPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 const PublicFeed = lazy(() => import('./pages/PublicFeed'));
+const ProfileOptimization = lazy(() => import('./pages/ProfileOptimization'));
 
 // Admin Imports (Lazy Loaded)
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
@@ -41,6 +42,8 @@ function AppContent() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/select-account" element={<AccountSelection />} />
+            
+            <Route path="/optimize-profile" element={<ProtectedRoute><ProfileOptimization /></ProtectedRoute>} />
             
             {/* Protected Routes */}
             <Route 
