@@ -166,6 +166,47 @@ export default function ReferralSection() {
                 </button>
               </div>
             </div>
+            
+            {/* Manual Referral Entry */}
+            <hr className="my-4 opacity-25" />
+            <div>
+              <label className="form-label fw-bold text-secondary small uppercase d-block mb-2">Have a Referral Code?</label>
+              {user?.has_used_referral ? (
+                <div className="p-3 bg-success bg-opacity-10 text-success rounded-4 d-flex align-items-center gap-2 small fw-bold neo-inset border-0">
+                  <i className="bi bi-check-circle-fill fs-5"></i> You have already applied a referral code.
+                </div>
+              ) : (
+                <div className="d-flex flex-column gap-2">
+                  <div className="d-flex gap-2">
+                    <input 
+                      type="text" 
+                      className="form-control neo-input flex-grow-1" 
+                      placeholder="Enter code here"
+                      id="manual-referral-input"
+                    />
+                    <button 
+                      className="neo-btn-accent px-4"
+                      onClick={async () => {
+                        const code = document.getElementById('manual-referral-input').value.trim();
+                        if (!code) return alert("Please enter a referral code.");
+                        try {
+                          const res = await api.post('/api/auth/referral/apply/', { referral_code: code });
+                          if (res.status === 200) {
+                            alert("Referral code applied successfully! You received 500 ULU Coins.");
+                            window.location.reload();
+                          }
+                        } catch (err) {
+                          alert(err.response?.data?.error || "Failed to apply referral code.");
+                        }
+                      }}
+                    >
+                      Apply
+                    </button>
+                  </div>
+                  <small className="text-muted">Get 500 ULU coins instantly when you enter a valid referral code.</small>
+                </div>
+              )}
+            </div>
           </NeomorphicCard>
         </div>
 

@@ -25,6 +25,7 @@ def _user_to_dict(user):
         'ulu_coins': getattr(user, 'ulu_coins', 0),
         'referral_code': getattr(user, 'referral_code', '') or '',
         'is_staff': user.is_staff,
+        'has_used_referral': user.referred_by is not None,
     }
 
 
@@ -57,6 +58,38 @@ def current_user_details(request):
     Uses standard Bearer token auth from the Authorization header.
     """
     return Response(_user_to_dict(request.user), status=status.HTTP_200_OK)
+
+# ─── Manual Referral Code Application ─────────────────────────────────────────
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def apply_manual_referral(request):
+    """
+    POST /api/auth/referral/apply/
+    Body: { "referral_code": "..." }
+    Applies a referral code to the current user if they haven't used one yet.
+    """
+    if request.user.referred_by:
+        return Response({'error': 'You have already used a referral code.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    code = request.data.get('referral_code')
+    if not code:
+        return Response({'error': 'Referral code is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    try:
+        inviter = User.objects.get(referral_code=code)
+        if inviter == request.user:
+            return Response({'error': 'You cannot use your own referral code.'}, status=status.HTTP_400_BAD_REQUEST)
+    except User.DoesNotExist:
+        return Response({'error': 'Invalid referral code.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    from .referral import apply_referral
+    apply_referral(request.user, code)
+    
+    # Refresh user to get updated coins and referred_by status
+    request.user.refresh_from_db()
+    
+    return Response({'success': True, 'user': _user_to_dict(request.user)})
+
 
 
 # ─── Google ID Token Verification ────────────────────────────────────────────
