@@ -20,7 +20,7 @@ class AdvertisementTests(APITestCase):
             user=self.user,
             location='Test Location'
         )
-        self.category = Category.objects.create(name='Tutor', slug='tutor')
+        self.category, _ = Category.objects.get_or_create(slug='tutor', defaults={'name': 'TUTOR'})
         self.client.force_authenticate(user=self.user)
 
     def test_create_ad_success(self):

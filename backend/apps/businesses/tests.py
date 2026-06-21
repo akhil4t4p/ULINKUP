@@ -14,7 +14,7 @@ class BusinessTests(APITestCase):
             password='password123',
             role='BUSINESS'
         )
-        self.category = Category.objects.create(name='Plumber', slug='plumber')
+        self.category, _ = Category.objects.get_or_create(slug='plumber', defaults={'name': 'PLUMBER'})
         self.profile = BusinessProfile.objects.create(
             user=self.user,
             category=self.category,
