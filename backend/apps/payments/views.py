@@ -161,6 +161,10 @@ class UluCoinWalletViewSet(viewsets.ModelViewSet):
             wallet.coins += pack['coins']
             wallet.save()
             
+            # Sync cached ulu_coins on User model
+            request.user.ulu_coins = wallet.coins
+            request.user.save(update_fields=['ulu_coins'])
+            
             CoinTransactionHistory.objects.create(
                 user=request.user,
                 transaction_type='RECHARGE',
@@ -193,24 +197,27 @@ class UluCoinWalletViewSet(viewsets.ModelViewSet):
         if not business_id:
             return Response({'error': 'Business ID is required'}, status=status.HTTP_400_BAD_REQUEST)
         
-        try:
-            wallet = UluCoinWallet.objects.get(user=request.user)
-            if wallet.coins < 7:
-                return Response({'error': 'Insufficient ULU Coins. You need 7 ULU Coins.'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            wallet.coins -= 7
-            wallet.save()
-            
-            CoinTransactionHistory.objects.create(
-                user=request.user,
-                transaction_type='SPEND',
-                coins_amount=7,
-                description=f"Unlocked contact info for business ID {business_id}"
-            )
-            
-            return Response({'success': True, 'new_balance': wallet.coins})
-        except UluCoinWallet.DoesNotExist:
-            return Response({'error': 'Wallet not found. Please purchase ULU coins.'}, status=status.HTTP_404_NOT_FOUND)
+        # Auto-create wallet if it doesn't exist
+        wallet, _ = UluCoinWallet.objects.get_or_create(user=request.user)
+        
+        if wallet.coins < 7:
+            return Response({'error': 'Insufficient ULU Coins. You need 7 ULU Coins.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        wallet.coins -= 7
+        wallet.save()
+        
+        # Sync cached ulu_coins on User model
+        request.user.ulu_coins = wallet.coins
+        request.user.save(update_fields=['ulu_coins'])
+        
+        CoinTransactionHistory.objects.create(
+            user=request.user,
+            transaction_type='SPEND',
+            coins_amount=7,
+            description=f"Unlocked contact info for business ID {business_id}"
+        )
+        
+        return Response({'success': True, 'new_balance': wallet.coins})
 
 class CoinTransactionHistoryViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = CoinTransactionHistorySerializer

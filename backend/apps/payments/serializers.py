@@ -16,5 +16,5 @@ class CoinTransactionHistorySerializer(serializers.ModelSerializer):
 class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
-        fields = ('id', 'amount', 'transaction_type', 'status', 'reference_id', 'created_at')
+        fields = ('id', 'amount', 'transaction_type', 'status', 'item_reference', 'razorpay_order_id', 'created_at')
         read_only_fields = ('id', 'created_at')

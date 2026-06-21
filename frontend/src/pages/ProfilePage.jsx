@@ -54,12 +54,12 @@ export default function ProfilePage() {
 
       if (isAuthenticated) {
         try {
-          // Fetch user wallet balance
-          const walletRes = await api.get('/api/wallets/');
+          // Fetch user wallet balance (correct endpoint and field)
+          const walletRes = await api.get('/api/coin-wallets/');
           if (walletRes.status === 200) {
             const walletData = walletRes.data.results || walletRes.data;
             if (walletData.length > 0) {
-              setUserCredits(parseFloat(walletData[0].balance));
+              setUserCredits(walletData[0].coins);
             }
           }
         } catch (e) {
@@ -67,11 +67,14 @@ export default function ProfilePage() {
         }
 
         try {
-          // Check if contact is already unlocked (by reviewing transaction logs)
-          const transRes = await api.get('/api/transactions/');
+          // Check if contact is already unlocked (by reviewing coin transaction logs)
+          const transRes = await api.get('/api/coin-transactions/');
           if (transRes.status === 200) {
             const list = transRes.data.results || transRes.data;
-            const alreadyUnlocked = list.some(t => t.transaction_type === 'LEAD_UNLOCK' && t.reference_id === `UNLK_${id}`);
+            const alreadyUnlocked = list.some(t => 
+              t.transaction_type === 'SPEND' && 
+              t.description && t.description.includes(`business ID ${id}`)
+            );
             if (alreadyUnlocked) {
               setContactUnlocked(true);
             }
@@ -189,7 +192,7 @@ export default function ProfilePage() {
                   <button className="neo-btn-accent px-4 py-2" onClick={handleUnlockContact}>
                     <i className="bi bi-unlock-fill me-2"></i> Get Contact (7 ULU Coins)
                   </button>
-                  <span className="text-muted small fw-semibold">Wallet: ₹{userCredits}</span>
+                  <span className="text-muted small fw-semibold"><i className="bi bi-coin text-warning me-1"></i>Wallet: {userCredits} ULU Coins</span>
                 </div>
               )}
             </div>
