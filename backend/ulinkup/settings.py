@@ -269,6 +269,8 @@ ACCOUNT_LOGIN_METHODS = {'email'}               # was: ACCOUNT_AUTHENTICATION_ME
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']  # was: ACCOUNT_EMAIL_REQUIRED + ACCOUNT_USERNAME_REQUIRED
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # CORS configuration
 CORS_ALLOW_ALL_ORIGINS = env('CORS_ALLOW_ALL_ORIGINS', default=False)
