@@ -30,13 +30,8 @@ export default function ProfilePage() {
           setProvider(profileRes.data);
         }
       } catch (err) {
-        console.warn("Could not load real profile, using stubs", err);
-        const STUBS = {
-          "1": { name: 'Apex Plumbing Solutions', category_name: 'Plumber', rating: 4.9, experience: 8, location: 'Bandra, Mumbai', verified: true, hourly_rate: '400', about: 'Professional plumbing services specializing in pipe repairs, installation of fixtures, and leak detection for residential and commercial spaces.', phone: '+91 98765 43210', email: 'apex.plumbing@gmail.com' },
-          "2": { name: 'Dr. Sarah Carter (Physics)', category_name: 'Tutor', rating: 4.8, experience: 12, location: 'Indiranagar, Bangalore', verified: true, hourly_rate: '800', about: 'Ph.D. in Physics offering personal tutoring for IIT JEE, NEET, and AP Physics. Focused on strengthening conceptual foundations and problem-solving skills.', phone: '+91 91234 56789', email: 'sarah.physics@tutor.org' },
-          "3": { name: 'VoltMaster Electricals', category_name: 'Electrician', rating: 4.7, experience: 5, location: 'Salt Lake, Kolkata', verified: false, hourly_rate: '350', about: 'Experienced electric installation and repair specialist. Handles home wiring, circuit break updates, short circuit debugging, and appliance installations.', phone: '+91 99887 76655', email: 'voltmaster.electric@gmail.com' }
-        };
-        setProvider(STUBS[id] || STUBS["1"]);
+        console.warn("Could not load real profile", err);
+        setProvider(null);
       }
 
       try {
@@ -45,11 +40,8 @@ export default function ProfilePage() {
           setReviews(reviewsRes.data.results || reviewsRes.data);
         }
       } catch (err) {
-        console.warn("Could not load real reviews, using stubs", err);
-        setReviews([
-          { id: 1, customer_name: 'Sandeep Sharma', rating: 5, comment: 'Quick response and resolved the sink leak in less than an hour! Highly recommend.', created_at: '2 days ago' },
-          { id: 2, customer_name: 'Karan Malhotra', rating: 4, comment: 'Professional service, although they arrived 15 mins late. The repair work was excellent.', created_at: '1 week ago' }
-        ]);
+        console.warn("Could not load real reviews", err);
+        setReviews([]);
       }
 
       if (isAuthenticated) {

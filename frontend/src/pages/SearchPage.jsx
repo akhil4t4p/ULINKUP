@@ -39,15 +39,8 @@ export default function SearchPage() {
           setCategories(res.data.results || res.data);
         }
       } catch (err) {
-        console.warn("Could not load categories from backend, using stubs", err);
-        setCategories([
-          { name: 'Plumber', slug: 'plumber' },
-          { name: 'Electrician', slug: 'electrician' },
-          { name: 'Tutor', slug: 'tutor' },
-          { name: 'Cleaner', slug: 'cleaner' },
-          { name: 'Web Designer', slug: 'designer' },
-          { name: 'Salon & Spa', slug: 'salon' }
-        ]);
+        console.warn("Could not load categories from backend", err);
+        setCategories([]);
       }
     };
     fetchCategories();
@@ -73,25 +66,8 @@ export default function SearchPage() {
           setProviders(res.data.results || res.data);
         }
       } catch (err) {
-        console.warn("Search query failed, using development fallback", err);
-        // Fallback stub list
-        const STUBS = [
-          { id: 1, name: 'Apex Plumbing Solutions', category_name: 'Plumber', rating: 4.9, experience: 8, location: 'Bandra, Mumbai', verified: true, hourly_rate: '400', is_available: true },
-          { id: 2, name: 'Dr. Sarah Carter (Physics)', category_name: 'Tutor', rating: 4.8, experience: 12, location: 'Indiranagar, Bangalore', verified: true, hourly_rate: '800', is_available: true },
-          { id: 3, name: 'VoltMaster Electricals', category_name: 'Electrician', rating: 4.7, experience: 5, location: 'Salt Lake, Kolkata', verified: false, hourly_rate: '350', is_available: false },
-          { id: 4, name: 'Quick Shine Cleaning', category_name: 'Cleaner', rating: 4.5, experience: 3, location: 'Bandra, Mumbai', verified: false, hourly_rate: '250', is_available: true }
-        ];
-        const filtered = STUBS.filter(p => {
-          const matchQuery = query ? (p.name.toLowerCase().includes(query.toLowerCase()) || p.category_name.toLowerCase().includes(query.toLowerCase())) : true;
-          const matchLoc = location ? p.location.toLowerCase().includes(location.toLowerCase()) : true;
-          const matchCat = category ? p.category_name === category : true;
-          const matchRating = p.rating >= minRating;
-          const matchExp = p.experience >= minExp;
-          const matchRate = parseFloat(p.hourly_rate) <= maxRate;
-          const matchAvail = isAvailableOnly ? p.is_available : true;
-          return matchQuery && matchLoc && matchCat && matchRating && matchExp && matchRate && matchAvail;
-        });
-        setProviders(filtered);
+        console.warn("Search query failed", err);
+        setProviders([]);
       } finally {
         setLoading(false);
       }

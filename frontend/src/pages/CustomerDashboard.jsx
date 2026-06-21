@@ -169,18 +169,9 @@ export default function CustomerDashboard() {
             <i className="bi bi-bookmark-star text-primary"></i> Saved Professionals
           </h3>
           <div className="d-flex flex-column gap-3">
-            <NeomorphicCard elevation="convex" className="p-4 d-flex justify-content-between align-items-center">
-              <div>
-                <h5 className="mb-1">Apex Plumbing Solutions</h5>
-                <p className="text-muted mb-0 small">
-                  <span className="neo-badge me-2">Plumber</span>
-                  <i className="bi bi-geo-alt-fill me-1"></i> Bandra, Mumbai
-                </p>
-              </div>
-              <div className="text-end d-flex flex-column align-items-end gap-2">
-                <span className="text-warning small fw-bold"><i className="bi bi-star-fill"></i> 4.9</span>
-                <Link to="/profile/1" className="neo-btn py-1 px-3 small text-decoration-none">Hire</Link>
-              </div>
+            <NeomorphicCard elevation="inset" className="p-4 text-center text-muted">
+              <i className="bi bi-bookmark-x fs-1 d-block mb-3"></i>
+              You have no saved professionals yet.
             </NeomorphicCard>
           </div>
         </div>

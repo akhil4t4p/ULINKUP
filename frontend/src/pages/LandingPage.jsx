@@ -33,13 +33,8 @@ export default function LandingPage() {
           setProviders(sorted);
         }
       } catch (err) {
-        console.warn("Could not load real providers, using development stubs", err);
-        // Fallback stubs
-        setProviders([
-          { id: 1, name: 'Apex Plumbing Solutions', category_name: 'Plumber', rating: 4.9, reviews: 24, location: 'Bandra, Mumbai', verified: true },
-          { id: 2, name: 'Dr. Sarah Carter (Physics)', category_name: 'Tutor', rating: 4.8, reviews: 42, location: 'Indiranagar, Bangalore', verified: true },
-          { id: 3, name: 'VoltMaster Electricals', category_name: 'Electrician', rating: 4.7, reviews: 18, location: 'Salt Lake, Kolkata', verified: false }
-        ]);
+        console.warn("Could not load real providers", err);
+        setProviders([]);
       }
 
       try {
@@ -58,11 +53,8 @@ export default function LandingPage() {
           });
         }
       } catch (err) {
-        console.warn("Could not load real ads, using development stubs", err);
-        setAds([
-          { title: 'Flat 20% Off - AC Servicing', business_name: 'VoltMaster', status: 'ACTIVE' },
-          { title: 'Free Demo Class for IIT JEE', business_name: 'Dr. Sarah Carter', status: 'ACTIVE' }
-        ]);
+        console.warn("Could not load real ads", err);
+        setAds([]);
       }
       setLoading(false);
     };
