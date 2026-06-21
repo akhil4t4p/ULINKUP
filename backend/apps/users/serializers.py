@@ -6,20 +6,25 @@ from .models import User, UsernameChangeLog
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'nickname', 'avatar', 'banner', 'google_avatar', 'avatar_preset', 'role', 'is_staff', 'is_active', 'referral_code', 'referred_by', 'ulu_coins')
-        read_only_fields = ('id', 'is_staff', 'is_active', 'google_avatar', 'referral_code', 'referred_by', 'ulu_coins')
+        fields = (
+            'id', 'username', 'email', 'nickname', 'avatar', 'banner', 'google_avatar', 'avatar_preset', 'role', 
+            'is_staff', 'is_active', 'referral_code', 'referred_by', 'ulu_coins',
+            'phone_number', 'whatsapp_number', 'business_email', 'instagram_url', 
+            'youtube_url', 'facebook_url', 'telegram_url', 'tiktok_url', 'is_profile_optimized'
+        )
+        read_only_fields = ('id', 'is_staff', 'is_active', 'google_avatar', 'referral_code', 'referred_by', 'ulu_coins', 'is_profile_optimized')
 
     def validate_username(self, value):
         user = self.instance
         if user and user.username != value:
-            # Enforce 3 times per month limit
-            one_month_ago = timezone.now() - timedelta(days=30)
+            # Enforce 1 time per 6 months (180 days) limit
+            six_months_ago = timezone.now() - timedelta(days=180)
             recent_changes = UsernameChangeLog.objects.filter(
                 user=user,
-                changed_at__gte=one_month_ago
+                changed_at__gte=six_months_ago
             ).count()
-            if recent_changes >= 3:
-                raise serializers.ValidationError("You can only change your username 3 times within a 30-day period.")
+            if recent_changes >= 1:
+                raise serializers.ValidationError("You can only change your username 1 time per 6 months.")
         return value
 
     def update(self, instance, validated_data):

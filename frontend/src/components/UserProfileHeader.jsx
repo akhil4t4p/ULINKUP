@@ -19,6 +19,14 @@ export default function UserProfileHeader({ profile, subscription, handleToggleO
   const [editing, setEditing] = useState(false);
   const [nickname, setNickname] = useState(user.nickname || '');
   const [username, setUsername] = useState(user.username || '');
+  const [phoneNumber, setPhoneNumber] = useState(user.phone_number || '');
+  const [whatsappNumber, setWhatsappNumber] = useState(user.whatsapp_number || '');
+  const [businessEmail, setBusinessEmail] = useState(user.business_email || '');
+  const [instagramUrl, setInstagramUrl] = useState(user.instagram_url || '');
+  const [youtubeUrl, setYoutubeUrl] = useState(user.youtube_url || '');
+  const [facebookUrl, setFacebookUrl] = useState(user.facebook_url || '');
+  const [telegramUrl, setTelegramUrl] = useState(user.telegram_url || '');
+  const [tiktokUrl, setTiktokUrl] = useState(user.tiktok_url || '');
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   
   // Only business accounts can upload avatar photos
@@ -53,7 +61,15 @@ export default function UserProfileHeader({ profile, subscription, handleToggleO
     try {
       const res = await api.patch('/api/auth/user/', {
         nickname,
-        username
+        username,
+        phone_number: phoneNumber,
+        whatsapp_number: whatsappNumber,
+        business_email: businessEmail,
+        instagram_url: instagramUrl,
+        youtube_url: youtubeUrl,
+        facebook_url: facebookUrl,
+        telegram_url: telegramUrl,
+        tiktok_url: tiktokUrl
       });
       if (res.status === 200) {
         setUser(res.data);
@@ -165,15 +181,53 @@ export default function UserProfileHeader({ profile, subscription, handleToggleO
           {/* User Info Section */}
           <div className="text-center text-md-start">
             {editing ? (
-              <div className="row g-3 mb-3 max-w-500">
+              <div className="row g-3 mb-3 max-w-500 text-start">
                 <div className="col-12">
-                  <input type="text" className="form-control neo-input fw-bold fs-4" value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="Nickname (Display Name)" />
+                  <label className="small fw-bold text-secondary">Nickname</label>
+                  <input type="text" className="form-control neo-input fw-bold" value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="Nickname (Display Name)" />
                 </div>
                 <div className="col-12">
+                  <label className="small fw-bold text-secondary">Username (limit: 1 change / 6 months)</label>
                   <div className="input-group">
                     <span className="input-group-text bg-transparent border-end-0 fw-bold">@</span>
                     <input type="text" className="form-control neo-input border-start-0 ps-0" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="username" />
                   </div>
+                </div>
+                
+                <h6 className="mt-4 mb-2 fw-bold text-secondary border-bottom pb-2">Contact Details</h6>
+                <div className="col-md-6">
+                  <label className="small fw-bold text-secondary">Phone Number</label>
+                  <input type="text" className="form-control neo-input" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="+91 9876543210" />
+                </div>
+                <div className="col-md-6">
+                  <label className="small fw-bold text-secondary">WhatsApp</label>
+                  <input type="text" className="form-control neo-input" value={whatsappNumber} onChange={(e) => setWhatsappNumber(e.target.value)} placeholder="+91 9876543210" />
+                </div>
+                <div className="col-12">
+                  <label className="small fw-bold text-secondary">Business Email</label>
+                  <input type="email" className="form-control neo-input" value={businessEmail} onChange={(e) => setBusinessEmail(e.target.value)} placeholder="contact@domain.com" />
+                </div>
+
+                <h6 className="mt-4 mb-2 fw-bold text-secondary border-bottom pb-2">Social Links</h6>
+                <div className="col-12">
+                  <label className="small fw-bold text-secondary"><i className="bi bi-instagram text-danger me-1"></i> Instagram</label>
+                  <input type="url" className="form-control neo-input" value={instagramUrl} onChange={(e) => setInstagramUrl(e.target.value)} placeholder="https://instagram.com/username" />
+                </div>
+                <div className="col-12">
+                  <label className="small fw-bold text-secondary"><i className="bi bi-youtube text-danger me-1"></i> YouTube</label>
+                  <input type="url" className="form-control neo-input" value={youtubeUrl} onChange={(e) => setYoutubeUrl(e.target.value)} />
+                </div>
+                <div className="col-12">
+                  <label className="small fw-bold text-secondary"><i className="bi bi-facebook text-primary me-1"></i> Facebook</label>
+                  <input type="url" className="form-control neo-input" value={facebookUrl} onChange={(e) => setFacebookUrl(e.target.value)} />
+                </div>
+                <div className="col-12">
+                  <label className="small fw-bold text-secondary"><i className="bi bi-telegram text-info me-1"></i> Telegram</label>
+                  <input type="url" className="form-control neo-input" value={telegramUrl} onChange={(e) => setTelegramUrl(e.target.value)} />
+                </div>
+                <div className="col-12">
+                  <label className="small fw-bold text-secondary"><i className="bi bi-tiktok text-dark me-1"></i> TikTok</label>
+                  <input type="url" className="form-control neo-input" value={tiktokUrl} onChange={(e) => setTiktokUrl(e.target.value)} />
                 </div>
               </div>
             ) : (
@@ -209,6 +263,28 @@ export default function UserProfileHeader({ profile, subscription, handleToggleO
                     )}
                   </div>
                 )}
+                
+                {/* Contact and Social Details Display */}
+                <div className="mt-4 pt-3 border-top text-start">
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <h6 className="fw-bold mb-2">Personal Details</h6>
+                      {user.phone_number && <div className="small mb-1"><i className="bi bi-telephone-fill text-secondary me-2"></i>{user.phone_number}</div>}
+                      {user.whatsapp_number && <div className="small mb-1"><i className="bi bi-whatsapp text-success me-2"></i>{user.whatsapp_number}</div>}
+                      {user.business_email && <div className="small mb-1"><i className="bi bi-envelope-fill text-primary me-2"></i>{user.business_email}</div>}
+                    </div>
+                    <div className="col-md-6">
+                      <h6 className="fw-bold mb-2">Socials</h6>
+                      <div className="d-flex gap-2 flex-wrap">
+                        {user.instagram_url && <a href={user.instagram_url} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline-danger"><i className="bi bi-instagram"></i></a>}
+                        {user.youtube_url && <a href={user.youtube_url} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline-danger"><i className="bi bi-youtube"></i></a>}
+                        {user.facebook_url && <a href={user.facebook_url} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline-primary"><i className="bi bi-facebook"></i></a>}
+                        {user.telegram_url && <a href={user.telegram_url} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline-info"><i className="bi bi-telegram"></i></a>}
+                        {user.tiktok_url && <a href={user.tiktok_url} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline-dark"><i className="bi bi-tiktok"></i></a>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </>
             )}
           </div>

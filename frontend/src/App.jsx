@@ -70,7 +70,7 @@ function AppContent() {
             
             {/* Shared Protected Routes */}
             <Route path="/search" element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
-            <Route path="/profile/:userId" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+            <Route path="/profile/:id" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             <Route path="/public" element={<ProtectedRoute><PublicFeed /></ProtectedRoute>} />
 
             {/* Admin Routes */}
