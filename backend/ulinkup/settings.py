@@ -259,7 +259,8 @@ REST_AUTH = {
     'REGISTER_SERIALIZER': 'apps.users.serializers.CustomRegisterSerializer',
     'JWT_AUTH_COOKIE': 'ulinkup-auth',
     'JWT_AUTH_REFRESH_COOKIE': 'ulinkup-refresh',
-    'JWT_AUTH_HTTPONLY': True,
+    'JWT_AUTH_HTTPONLY': False,  # Must be False — frontend reads tokens from JSON, not cookies
+    'JWT_AUTH_RETURN_EXPIRATION': True,
     'JWT_AUTH_SECURE': not DEBUG,
     'JWT_AUTH_SAMESITE': 'Lax',
 }

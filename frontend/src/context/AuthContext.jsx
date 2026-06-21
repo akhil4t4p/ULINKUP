@@ -16,7 +16,7 @@ export function AuthProvider({ children }) {
       if (access && savedUser) {
         try {
           setUser(JSON.parse(savedUser));
-          
+
           // Verify session by calling backend details endpoint
           const res = await api.get('/api/auth/user/');
           if (res.status === 200) {
@@ -29,7 +29,7 @@ export function AuthProvider({ children }) {
       }
       setLoading(false);
     };
-    
+
     initializeAuth();
   }, []);
 
@@ -68,11 +68,11 @@ export function AuthProvider({ children }) {
       setLoading(true);
       const res = await api.post('/api/auth/developer/', { email, role });
       const { access, refresh, user: userData } = res.data;
-      
+
       localStorage.setItem('access_token', access);
       localStorage.setItem('refresh_token', refresh);
       localStorage.setItem('user', JSON.stringify(userData));
-      
+
       setUser(userData);
       return { success: true, user: userData };
     } catch (err) {
@@ -95,7 +95,7 @@ export function AuthProvider({ children }) {
         role: role.toUpperCase(),
         referral_code: referralCode
       });
-      
+
       const accessToken = res.data.access_token || res.data.access || res.data.key;
       const refreshToken = res.data.refresh_token || res.data.refresh;
       const userData = res.data.user;
@@ -109,13 +109,13 @@ export function AuthProvider({ children }) {
       return { success: true, user: userData };
     } catch (err) {
       const errData = err.response?.data;
-      const message = errData?.detail || 
-                    errData?.non_field_errors?.[0] || 
-                    errData?.email?.[0] || 
-                    errData?.username?.[0] || 
-                    errData?.password?.[0] || 
-                    errData?.password1?.[0] || 
-                    'Registration failed. Email or username might be already taken.';
+      const message = errData?.detail ||
+        errData?.non_field_errors?.[0] ||
+        errData?.email?.[0] ||
+        errData?.username?.[0] ||
+        errData?.password?.[0] ||
+        errData?.password1?.[0] ||
+        'Registration failed. Email or username might be already taken.';
       return { success: false, error: message };
     } finally {
       setLoading(false);

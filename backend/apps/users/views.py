@@ -2,12 +2,62 @@ from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.conf import settings
 from .models import User
+
+
+# ─── Helper: serialize user dict ─────────────────────────────────────────────
+def _user_to_dict(user):
+    """Return a consistent user dict used across all auth endpoints."""
+    return {
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'role': user.role,
+        'google_avatar': getattr(user, 'google_avatar', '') or '',
+        'avatar_preset': getattr(user, 'avatar_preset', '') or '',
+        'ulu_coins': getattr(user, 'ulu_coins', 0),
+        'referral_code': getattr(user, 'referral_code', '') or '',
+        'is_staff': user.is_staff,
+    }
+
+
+# ─── Custom JWT Login (returns user data alongside tokens) ───────────────────
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """Extends SimpleJWT serializer to include user details in the response."""
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        data['user'] = _user_to_dict(self.user)
+        return data
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    """
+    POST /api/auth/token/
+    Body: { "email": "...", "password": "..." }
+
+    Returns: { "access": "...", "refresh": "...", "user": { ... } }
+    """
+    serializer_class = CustomTokenObtainPairSerializer
+
+
+# ─── Standalone User Details Endpoint (header-based JWT) ─────────────────────
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def current_user_details(request):
+    """
+    GET /api/auth/me/
+    Returns the current authenticated user's details.
+    Uses standard Bearer token auth from the Authorization header.
+    """
+    return Response(_user_to_dict(request.user), status=status.HTTP_200_OK)
+
 
 # ─── Google ID Token Verification ────────────────────────────────────────────
 # This is the recommended approach for the Google Sign-In (GSI) flow:

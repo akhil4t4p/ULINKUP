@@ -4,12 +4,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
     TokenRefreshView,
 )
 
 # Views Imports
-from apps.users.views import GoogleLogin, google_auth_verify, developer_mock_login, ConfigAPIView, NotificationViewSet, CustomTokenRefreshView
+from apps.users.views import GoogleLogin, google_auth_verify, developer_mock_login, ConfigAPIView, NotificationViewSet, CustomTokenRefreshView, CustomTokenObtainPairView, current_user_details
 from apps.customers.views import CustomerProfileViewSet
 from apps.businesses.views import CategoryViewSet, BusinessProfileViewSet, BusinessPortfolioViewSet, LeadViewSet
 from apps.reviews.views import ReviewViewSet
@@ -73,8 +72,11 @@ urlpatterns = [
     # Local Developer Mock login (bypasses Google keys for dev environment)
     path('api/auth/developer/', developer_mock_login, name='developer_mock_login'),
     
-    # SimpleJWT tokens (if direct JWT generation is needed)
-    path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    # SimpleJWT tokens — custom view returns user data alongside tokens
+    path('api/auth/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    
+    # Standalone user details (header-based JWT, not cookie-dependent)
+    path('api/auth/me/', current_user_details, name='current_user_details'),
     # Community and Public Feed APIs
     path('api/community/', include('apps.community.urls')),
 ]
